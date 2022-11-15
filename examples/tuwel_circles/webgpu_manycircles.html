@@ -1,0 +1,308 @@
+<html>
+<head>
+
+<style>
+html, body {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: #e4eef4;
+	outline: 2em solid #006699;
+	font-family: Monospace;
+	font-size: 1rem;
+}
+canvas {
+	background: #c6339e;
+}
+body {
+	display: flex;
+	flex-direction: column;
+}
+.center {
+	margin: auto;
+}
+p {
+	text-align: center;
+	white-space: pre-line;
+}
+</style>
+
+</head>
+<body>
+
+<div class="center">
+	<p>By Lucas Melo</p>
+	<p id="header">Initializing WebGPU... Check console for errors.</p>
+	<canvas id="canvas" width="800" height="600"></canvas>
+</div>
+
+<script>
+window.addEventListener("load", async() => {
+	const header = document.getElementById("header");
+	const canvas = document.getElementById("canvas");
+	
+	// Number of dots to compute and render
+	const numDots = 5000;
+	const dotRadius = 15;
+	const dotSpeed = 0.02;
+	
+	// WebGPU initialization
+	const gpu = navigator.gpu;
+	const adapter = gpu && await gpu.requestAdapter();
+	const device = adapter && await adapter.requestDevice();
+	const context = device && canvas.getContext("webgpu");
+	if (!context) {
+		header.textContent = "WebGPU could not be initialized. Try using Google Chrome Canary.\nThen go to chrome://flags and set \"Unsafe WebGPU\" to \"Enabled\"";
+		return;
+	}
+	header.remove();
+	
+	// WebGPU configuration
+	context.configure({
+	  alphaMode: "opaque",
+	  device: device,
+	  format: gpu.getPreferredCanvasFormat()
+	});
+	
+	// Shader to render one circle on the center of the canvas
+	const shaderCode = `
+		struct VertexInput {
+			@location(0) position: vec2<f32>
+		};
+		
+		struct VertexOutput {
+			@builtin(position) pos: vec4<f32>, // Built-in vertex position in world-space
+			@location(0) uv: vec2<f32> // UV coordinates
+		};
+		
+		struct Dot {
+			pos: vec2<f32>,
+			dir: vec2<f32>
+		};
+		
+		struct Uniforms {
+			screenSize: vec2<f32>,
+			dotRadius: f32,
+			dotSpeed: f32,
+			deltaT: f32
+		};
+		
+		@group(0) @binding(0) var<storage, read_write> dots: array<Dot>;
+		@group(0) @binding(1) var<uniform> uniforms: Uniforms;
+		
+		// Constant array
+		const positions = array<vec2<f32>, 4>(
+			vec2<f32>(-1f, -1f),
+			vec2<f32>(-1f,  1f),
+			vec2<f32>( 1f, -1f),
+			vec2<f32>( 1f,  1f)
+		);
+	
+		@vertex
+		fn vs_main(vertex: VertexInput, @builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+			let center: vec2<f32> = (vertex.position * 2f / uniforms.screenSize) - 1f;
+			let radius: vec2<f32> = uniforms.dotRadius / uniforms.screenSize;
+			var output: VertexOutput;
+			//output.pos = vec4<f32>(center + positions[vertexIndex] * radius, 0f, 1f);
+			output.pos = vec4<f32>(center + positions[vertexIndex] * radius, 0f, 1f);
+			output.uv = positions[vertexIndex];
+			return output;
+		}
+		
+		@fragment
+		fn fs_main(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
+			//return vec4<f32>(uv, 0f, 1f);
+			let distanceFromCenterSquared = dot(uv, uv);
+			if (distanceFromCenterSquared > 1f) {
+				 discard;
+			}
+			if (distanceFromCenterSquared > 0.7f) {
+				return vec4<f32>(0f, 0f, 0f, 1f); // Stroke/Border of circle
+			}
+			return vec4<f32>(0.68f, 0.85f, 0.9f, 1f); // Fill of circle
+		}
+		
+		fn modFloat(x: vec2<f32>, y: vec2<f32>) -> vec2<f32> {
+			return x - y * floor(x / y);
+		}
+		
+		@compute @workgroup_size(32)
+		fn cs_main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+			let N: u32 = arrayLength(&dots);
+			let i: u32 = globalId.x;
+			
+			// Guard against out-of-bounds workgroup sizes
+			if (i >= N) {
+				return;
+			}
+			
+			var dot: Dot = dots[i];
+			dot.pos = modFloat(dot.pos + dot.dir * uniforms.dotSpeed * uniforms.deltaT, uniforms.screenSize);
+			dots[i] = dot;
+		}
+	`;
+	const shaderModule = device.createShaderModule({
+		code: shaderCode
+	});
+	
+	// Create color attachment (where we will draw onto)
+	const colorAttachment = {
+		view: null, // We will set this later (every frame)
+		clearValue: { r: 1, g: 1, b: 1, a: 1 },
+		loadOp: "clear",
+		storeOp: "store"
+	};
+	
+	// Create uniform buffer
+	const uniformsBuffer = device.createBuffer({
+		mappedAtCreation: true,
+		size: 5 * 4, // 5 floats, each with 4 bytes
+		usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST // COPY_DST allows us to write into this buffer
+	});
+	new Float32Array(uniformsBuffer.getMappedRange()).set([canvas.width, canvas.height, dotRadius, dotSpeed, 0]);
+	uniformsBuffer.unmap();
+	
+	// Create dots buffer
+	const dotsBuffer_cpu = new Float32Array(numDots * 4); // Each dot has 4 floats
+	for (let i = 0; i < dotsBuffer_cpu.length;) {
+		const xPos = Math.random() * canvas.width;
+		const yPos = Math.random() * canvas.height;
+		const xDir = Math.random() * 2 - 1;
+		const yDir = Math.random() * 2 - 1;
+		const lDir = Math.sqrt(xDir * xDir + yDir * yDir); // Length of vector (xDir, yDir)
+		dotsBuffer_cpu[i++] = xPos;
+		dotsBuffer_cpu[i++] = yPos;
+		dotsBuffer_cpu[i++] = xDir / lDir;
+		dotsBuffer_cpu[i++] = yDir / lDir;
+	}
+	const dotsBuffer = device.createBuffer({
+		mappedAtCreation: true,
+		size: numDots * 4 * 4, // Each dot has 2x vec2<f32>. Each f32 has 4 bytes
+		usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX
+	});
+	new Float32Array(dotsBuffer.getMappedRange()).set(dotsBuffer_cpu);
+	dotsBuffer.unmap();
+	
+	// Pipeline to render circle
+	const renderPipeline = device.createRenderPipeline({
+		layout: "auto",
+		vertex: { // Describe the vertex stage of the pipeline
+			module: shaderModule,
+			entryPoint: "vs_main",
+			buffers: [ // We will have one instances-buffer, holding the positions of each dot
+				{
+					arrayStride: 4 * 4, // Stride 4 floats in the buffer for every instance (i.e.: ignore the dot's direction)
+					stepMode: "instance", // Each dot is treated as an instance. The vertex will be determined in the shader
+					attributes: [
+						{
+							shaderLocation: 0, // Match this in the shader
+							offset: 0, // Start at the first float in the buffer
+							format: "float32x2" // Each position consists of two floats (x and y coordinates)
+						}
+					]
+				}
+			]
+		},
+		fragment: {
+			module: shaderModule,
+			entryPoint: "fs_main",
+			targets: [{
+				format: gpu.getPreferredCanvasFormat()
+			}]
+		},
+		primitive: {
+			topology: "triangle-strip"
+		}
+	});
+	
+	// Pipeline to process the circles
+	const computePipeline = device.createComputePipeline({
+		layout: "auto",
+		compute: {
+			module: shaderModule,
+			entryPoint: "cs_main"
+		}
+	});
+	
+	// Create compute bind group for shader
+	const computeBindGroup = device.createBindGroup({
+		layout: computePipeline.getBindGroupLayout(0),
+		entries: [
+			{ // Dots/Circles buffer
+				binding: 0, // Must match binding from shader
+				resource: {
+					buffer: dotsBuffer
+				}
+			},
+			{ // Uniforms buffer
+				binding: 1, // Must match binding from shader
+				resource: {
+					buffer: uniformsBuffer
+				}
+			}
+		]
+	});
+	
+	// Create render bind group for shader
+	const renderBindGroup = device.createBindGroup({
+		layout: renderPipeline.getBindGroupLayout(0),
+		entries: [
+			{ // Uniforms buffer
+				binding: 1,
+				resource: {
+					buffer: uniformsBuffer
+				}
+			}
+		]
+	});
+	
+	function update(deltaT) {
+		// Write deltaT into uniforms buffer at 5th float (offset = 4 floats, each 4 bytes)
+		device.queue.writeBuffer(uniformsBuffer, 4 * 4, new Float32Array([deltaT]));
+		
+		// Create command encoder
+		const commandEncoder = device.createCommandEncoder();
+		
+		// Create and set up the compute pass
+		const computePass = commandEncoder.beginComputePass();
+		computePass.setPipeline(computePipeline);
+		computePass.setBindGroup(0, computeBindGroup);
+		computePass.dispatchWorkgroups(Math.ceil(numDots / 32)); // 32 matches workgroup_size in shader
+		computePass.end();
+		
+		// Set view for color attachment
+		colorAttachment.view = context.getCurrentTexture().createView();
+		
+		// Create and set up the render pass
+		const renderPass = commandEncoder.beginRenderPass({
+			colorAttachments: [colorAttachment]
+		});
+		renderPass.setPipeline(renderPipeline);
+		renderPass.setBindGroup(0, renderBindGroup);
+		renderPass.setVertexBuffer(0, dotsBuffer);
+		renderPass.draw(4, numDots);
+		renderPass.end();
+		
+		// Finish command encoder
+		const commandBuffer = commandEncoder.finish();
+		
+		// Submit commands to the GPU
+		device.queue.submit([commandBuffer]);
+	}
+	
+	let lastFrame = performance.now();
+	function frame() {
+		const curFrame = performance.now();
+		const deltaT = curFrame - lastFrame;
+		lastFrame = curFrame;
+		update(deltaT);
+		requestAnimationFrame(frame);
+	}
+	requestAnimationFrame(frame);
+});
+</script>
+
+</body>
+</html>

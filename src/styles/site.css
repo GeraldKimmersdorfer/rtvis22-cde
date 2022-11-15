@@ -1,0 +1,80 @@
+.ui-widget-content {
+    background: rgba(0.0, 0.0, 0.0, 0.8);
+}
+.ui-widget-header {
+    background: rgba(51, 51, 51, 0.493);
+}
+ 
+html {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: 100%;
+    height: 100%;
+}
+
+ body {
+    margin: 0px;
+    overflow: hidden; /* Hide scrollbars */
+    width: 100%;
+    height: 100%;
+ }
+
+ .time-range {
+    font-weight: bold;
+    color: orange;
+ }
+
+ .no-close .ui-dialog-titlebar-close {
+    display: none;
+  }
+
+  #footer {
+    position:absolute;
+    width:100%;
+    background: rgba(0.0, 0.0, 0.0, 0.8);
+    bottom: 0;
+    padding: 8px 15px 10px 15px;
+    font-size:small;
+    color: white;
+    box-sizing: border-box;
+  }
+
+  body.error {
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+    height: 50vh;
+    background-color: #af000f;
+    background-size: 20px 20px;
+    animation: progress-bar-stripes 1s linear infinite;
+  }
+  
+  @keyframes progress-bar-stripes {
+    0% {
+      background-position: 40px 0;
+    }
+    100% {
+      background-position: 0 0;
+    }
+}
+
+.positionable {
+  position: absolute;
+  display: block;
+  right: 0;
+  bottom: 0;
+  background-color: #bcd5e6;
+}
+
+#nowebgpu {
+  border-radius: 10px;
+  background-color: #af000fd8;
+  border: solid 5px #ffffff96;
+  -webkit-box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5); 
+  box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5);
+  padding: 0px 30px 0px 30px;
+  color: #FFFFFF;
+  width: 520px;
+  height: 240px;
+}
+#nowebgpu a {
+  color: #FFFFFF;
+  font-style: italic;
+}

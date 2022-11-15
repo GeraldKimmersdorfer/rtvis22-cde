@@ -1,0 +1,155 @@
+<html>
+<head>
+
+<style>
+html, body {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: #e4eef4;
+	outline: 2em solid #006699;
+	font-family: Monospace;
+	font-size: 1rem;
+}
+canvas {
+	background: #c6339e;
+}
+body {
+	display: flex;
+	flex-direction: column;
+}
+.center {
+	margin: auto;
+}
+p {
+	text-align: center;
+	white-space: pre-line;
+}
+</style>
+
+</head>
+<body>
+
+<div class="center">
+	<p>By Lucas Melo</p>
+	<p id="header">Initializing WebGPU... Check console for errors.</p>
+	<canvas id="canvas" width="600" height="600"></canvas>
+</div>
+
+<script>
+window.addEventListener("load", async() => {
+	const header = document.getElementById("header");
+	const canvas = document.getElementById("canvas");
+	
+	// WebGPU initialization
+	const gpu = navigator.gpu;
+	const adapter = gpu && await gpu.requestAdapter();
+	const device = adapter && await adapter.requestDevice();
+	if (!device) {
+		header.textContent = "WebGPU could not be initialized. Try using Google Chrome Canary.\nThen go to chrome://flags and set \"Unsafe WebGPU\" to \"Enabled\"";
+		return;
+	}
+	header.remove();
+	const context = canvas.getContext("webgpu");
+	
+	// WebGPU configuration
+	context.configure({
+	  alphaMode: "opaque",
+	  device: device,
+	  format: gpu.getPreferredCanvasFormat()
+	});
+	
+	// Shader to render one circle on the center of the canvas
+	const shaderCode = `
+		struct VertexOutput {
+			@builtin(position) posWS: vec4<f32>, // Built-in vertex position in world-space
+			@location(0) uv: vec2<f32> // UV coordinates
+		};
+	
+		// Constant array
+		const positions = array<vec2<f32>, 4>(
+			vec2<f32>(-1f, -1f),
+			vec2<f32>(-1f,  1f),
+			vec2<f32>( 1f, -1f),
+			vec2<f32>( 1f,  1f)
+		);
+	
+		@vertex
+		fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+			var output: VertexOutput;
+			output.posWS = vec4<f32>(positions[vertexIndex] * 0.5f, 0f, 1f);
+			output.uv = positions[vertexIndex];
+			return output;
+		}
+		
+		@fragment
+		fn fs_main(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
+			//return vec4<f32>(uv, 0f, 1f);
+			let distanceFromCenterSquared = dot(uv, uv);
+			if (distanceFromCenterSquared > 1f) {
+				 discard;
+			}
+			if (distanceFromCenterSquared > 0.9f) {
+				return vec4<f32>(0f, 0f, 0f, 1f); // Stroke/Border of circle
+			}
+			return vec4<f32>(0.68f, 0.85f, 0.9f, 1f); // Fill of circle
+		}
+	`;
+	const shaderModule = device.createShaderModule({
+		code: shaderCode
+	});
+	
+	// Create color attachment (where we will draw onto)
+	const colorAttachment = {
+		view: null, // We will set this later (every frame)
+		loadOp: "clear",
+		clearValue: { r: 1, g: 1, b: 1, a: 1 },
+		storeOp: "store"
+	};
+	
+	// Pipeline to render circle
+	const pipeline = device.createRenderPipeline({
+		layout: "auto",
+		vertex: { // Describe the vertex stage of the pipeline
+			module: shaderModule,
+			entryPoint: "vs_main"
+		},
+		fragment: {
+			module: shaderModule,
+			entryPoint: "fs_main",
+			targets: [{
+				format: gpu.getPreferredCanvasFormat()
+			}]
+		},
+		primitive: {
+			topology: "triangle-strip"
+		}
+	});
+	
+	function render() {
+		// Set view for color attachment
+		colorAttachment.view = context.getCurrentTexture().createView();
+		
+		// Create and set up command encoder
+		const commandEncoder = device.createCommandEncoder();
+		const renderPass = commandEncoder.beginRenderPass({
+			colorAttachments: [colorAttachment]
+		});
+		renderPass.setPipeline(pipeline);
+		renderPass.draw(4);
+		renderPass.end();
+		
+		// Finish command encoder
+		const commandBuffer = commandEncoder.finish();
+		
+		// Submit commands to the GPU
+		device.queue.submit([commandBuffer]);
+	}
+	render();
+});
+</script>
+
+</body>
+</html>
