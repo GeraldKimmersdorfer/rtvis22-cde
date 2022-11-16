@@ -1,1 +1,4 @@
 node_modules
+/data/source
+.idea
+__pycache__
