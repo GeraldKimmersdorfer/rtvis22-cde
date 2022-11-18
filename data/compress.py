@@ -2,122 +2,135 @@
 # https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data and creates
 # a binary compressed version for the Climatic Change Viewer it furthermore interpolates NULL and error values and
 # precalculates the coordinates in equirectangular view.
-from time import sleep
 
-filesource = "source/GlobalLandTemperaturesByCity.csv"
-#filesource = "source/GlobalLandTemperaturesByCity100k.csv"
-filedest = "cdata.dat"
+filesource = "data/source/GlobalLandTemperaturesByCity.csv"
+#filesource = "data/source/GlobalLandTemperaturesByCity100k.csv"
+
+filedest = "dist/cdata.xz"
+progressrefreshevery = 1000
 
 from csv import DictReader
 from tqdm import tqdm
 import struct
 import datetime
+import lzma
 
 def getposcode(latstr, longstr):
     return latstr + longstr
 
-################## FIRST RUN ####################
-#  - Evaluate min and max-date
-#  - Position LUT, Country LUT
-#  - Counts
-#################################################
+#####################################################################
+################## READ FILE AND EXTRACT OBJECTS ####################
+#####################################################################
 counttemp = 0
 positionmap = {}
+positionlist = []
 countrymap = {}
 countrylist = []
+temperaturelist = []
 mindate = datetime.datetime.now()
 maxdate = datetime.datetime.strptime("0001-01-01", "%Y-%m-%d")
-progressrefreshevery = 1000
 with open(filesource, 'r', encoding="utf-8") as read_obj:
     csv_reader = DictReader(read_obj)
-    progressbar = tqdm(unit=" lines", unit_scale=True, desc="First run")
+    progressbar = tqdm(unit=" lines", unit_scale=True, desc="Reading Input File")
     for row in csv_reader:
         counttemp += 1
+        row['dt'] = datetime.datetime.strptime(row['dt'], "%Y-%m-%d")
+        mindate = min(row['dt'], mindate)
+        maxdate = max(row['dt'], maxdate)
 
-        curdate = datetime.datetime.strptime(row['dt'], "%Y-%m-%d")
-        if (curdate < mindate):
-            mindate = curdate
-        if (curdate > maxdate):
-            maxdate = curdate
+        
+        row['src'] = 0
+        try:
+            row['avgt'] = float(row['AverageTemperature'])
+        except:
+            row['avgt'] = 0.0
+            row['src'] = 1
 
-        poscode = getposcode(row['Latitude'], row['Longitude'])
-        if not poscode in positionmap:
-            if not row['Country'] in countrymap:
+        row['poscode'] = getposcode(row['Latitude'], row['Longitude'])
+        if not row['poscode'] in positionmap:
+            #if not row['Country'] in countrymap:
                 # add new country entry
-                countrymap[row['Country']] = len(countrylist)
-                countrylist.append(row['Country'])
-            # add new positionmap entry
-            positionmap[poscode] = {
+                #countrymap[row['Country']] = len(countrylist)
+                #countrylist.append(row['Country'])
+            # add new positionslist entry
+            positionlist.append({
                 'lat': row['Latitude'],
                 'long': row['Longitude'],
                 'city': row['City']
-            }
+            })
+            positionmap[row['poscode']] = len(positionlist) - 1
+
+        temperaturelist.append({
+            "avgt": row['avgt'],
+            "pid": positionmap[row['poscode']],
+            "src": row['src'],
+            "dt": row['dt']
+        })
 
         if not counttemp % progressrefreshevery:
             # Give the user some form of feedback every x entries:
             progressbar.update(progressrefreshevery)
     progressbar.close()
 
-currposid = 0
-for key in positionmap:
-    positionmap[key]['id'] = currposid
-    positionmap[key]['x'] = 0.0
-    positionmap[key]['y'] = 0.0
-    currposid += 1
+##################################################################
+################## CALCULATE PROJECTED POINTS ####################
+##################################################################
+for val in positionlist:
+    #ToDo calculate x,y equirectangular projection
+    val['x'] = 0.0 
+    val['y'] = 0.0
+
+#ToDo: Interpolate all temp where src = 1
 
 
-# Now start to write the file:
-print(f"{counttemp} entries. {mindate} min. {maxdate} max. {len(countrylist)} countries, {len(positionmap)} positions", flush=True)
 
-dest_file = open(filedest, 'w+b')
+#print(f"{counttemp} entries. {mindate} min. {maxdate} max. {len(countrylist)} countries, {len(positionmap)} positions", flush=True)
 
-dest_file.write(mindate.year.to_bytes(2, "big", signed=False))          # 2 byte
-dest_file.write(mindate.month.to_bytes(1, "big", signed=False))         # 1 byte
-dest_file.write(mindate.day.to_bytes(1, "big", signed=False))           # 1 byte
-dest_file.write(maxdate.year.to_bytes(2, "big", signed=False))          # 2 byte
-dest_file.write(maxdate.month.to_bytes(1, "big", signed=False))         # 1 byte
-dest_file.write(maxdate.day.to_bytes(1, "big", signed=False))           # 1 byte
+#########################################################
+################## GET BINARY DATA ######################
+#########################################################
 
-dest_file.write(counttemp.to_bytes(4, "big", signed=False))             # 4 byte
-dest_file.write((len(positionmap)).to_bytes(2, "big", signed=False))    # 2 byte
-dest_file.write((len(countrylist)).to_bytes(1, "big", signed=False))    # 1 byte
+bdata = bytearray()
+
+bdata.extend(mindate.year.to_bytes(2, "big", signed=False))          # 2 byte
+bdata.extend(mindate.month.to_bytes(1, "big", signed=False))         # 1 byte
+bdata.extend(mindate.day.to_bytes(1, "big", signed=False))           # 1 byte
+bdata.extend(maxdate.year.to_bytes(2, "big", signed=False))          # 2 byte
+bdata.extend(maxdate.month.to_bytes(1, "big", signed=False))         # 1 byte
+bdata.extend(maxdate.day.to_bytes(1, "big", signed=False))           # 1 byte
+
+bdata.extend(counttemp.to_bytes(4, "big", signed=False))             # 4 byte
+bdata.extend((len(positionmap)).to_bytes(2, "big", signed=False))    # 2 byte
+bdata.extend((len(countrylist)).to_bytes(1, "big", signed=False))    # 1 byte
 
 # now lets write the position lut (index is derived
 # by position in file (we don't need to save that)
-for key in positionmap:                                                 # len(positionmap) *
-    dest_file.write(struct.pack(">f", positionmap[key]['x']))               # 4 byte
-    dest_file.write(struct.pack(">f", positionmap[key]['y']))               # 4 byte
+for val in positionlist:                                                 # len(positionmap) *
+    bdata.extend(struct.pack(">f", val['x']))               # 4 byte
+    bdata.extend(struct.pack(">f", val['y']))               # 4 byte
 
+progressbar = tqdm(total=counttemp, unit=" lines", unit_scale=True, desc="Writing temperature data")
+for i, itm in enumerate(temperaturelist):
+    ddates = (itm['dt'] - mindate).days
+    bdata.extend(ddates.to_bytes(4, "big", signed=False))            # 4 byte
+    bdata.extend(itm['pid'].to_bytes(2, "big", signed=False))             # 2 byte
+    bdata.extend(struct.pack(">f", itm['avgt']))                            # 4 byte
+    bdata.extend(itm['src'].to_bytes(1, "big", signed=False))               # 1 byte
 
+    if not i % progressrefreshevery:
+        progressbar.update(progressrefreshevery)
+progressbar.close()
 
-################## SECOND RUN ####################
-#  - Write to binary file
-##################################################
-with open(filesource, 'r', encoding="utf-8") as read_obj:
-    csv_reader = DictReader(read_obj)
-    progressbar = tqdm(total=counttemp, unit=" lines", unit_scale=True, desc="Second run")
-    i = -1
-    for row in csv_reader:                                              # counttemp *
-        i += 1
-        curdate = datetime.datetime.strptime(row['dt'], "%Y-%m-%d")
-        ddates = (curdate - mindate).days
-        dest_file.write(ddates.to_bytes(4, "big", signed=False))            # 4 byte
-
-        poscode = getposcode(row['Latitude'], row['Longitude'])
-        posid = positionmap[poscode]['id']
-        dest_file.write(posid.to_bytes(2, "big", signed=False))             # 2 byte
-
-        try:
-            avgt = float(row['AverageTemperature'])
-        except:
-            avgt = 0.0 #ToDo: Interpolate
-        dest_file.write(struct.pack(">f", avgt))                            # 4 byte
-
-        #ToDo: Source
-        dest_file.write((0).to_bytes(1, "big", signed=False))               # 1 byte
-        if not i % progressrefreshevery:
-            # Give the user some form of feedback every x entries:
-            progressbar.update(progressrefreshevery)
-    progressbar.close()
-
-dest_file.close()
+##############################################################################
+################## COMPRESS BINARY DATA AND WRITE TO FILE ####################
+##############################################################################
+print("compress file...")
+my_filters = [
+    {
+        "id": lzma.FILTER_LZMA2,
+        "preset": 9 | lzma.PRESET_EXTREME,
+        "dict_size": 128 * 1000000
+    },
+]
+with lzma.open(filedest, "w", filters=my_filters, format=lzma.FORMAT_XZ) as file:
+    file.write(bdata)
