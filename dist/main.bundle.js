@@ -21,7 +21,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, ".ui-widget-content {\r\n    background: rgba(0.0, 0.0, 0.0, 0.8);\r\n}\r\n.ui-widget-header {\r\n    background: rgba(51, 51, 51, 0.493);\r\n}\r\n \r\nhtml {\r\n    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\r\n    width: 100%;\r\n    height: 100%;\r\n}\r\n\r\n body {\r\n    margin: 0px;\r\n    overflow: hidden; /* Hide scrollbars */\r\n    width: 100%;\r\n    height: 100%;\r\n }\r\n\r\n .time-range {\r\n    font-weight: bold;\r\n    color: orange;\r\n }\r\n\r\n .no-close .ui-dialog-titlebar-close {\r\n    display: none;\r\n  }\r\n\r\n  #footer {\r\n    position:absolute;\r\n    width:100%;\r\n    background: rgba(0.0, 0.0, 0.0, 0.8);\r\n    bottom: 0;\r\n    padding: 8px 15px 10px 15px;\r\n    font-size:small;\r\n    color: white;\r\n    box-sizing: border-box;\r\n  }\r\n\r\n  body.error {\r\n    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);\r\n    height: 50vh;\r\n    background-color: #af000f;\r\n    background-size: 20px 20px;\r\n    animation: progress-bar-stripes 1s linear infinite;\r\n  }\r\n  \r\n  @keyframes progress-bar-stripes {\r\n    0% {\r\n      background-position: 40px 0;\r\n    }\r\n    100% {\r\n      background-position: 0 0;\r\n    }\r\n}\r\n\r\n.positionable {\r\n  position: absolute;\r\n  display: block;\r\n  right: 0;\r\n  bottom: 0;\r\n  background-color: #bcd5e6;\r\n}\r\n\r\n#nowebgpu {\r\n  border-radius: 10px;\r\n  background-color: #af000fd8;\r\n  border: solid 5px #ffffff96;\r\n  -webkit-box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5); \r\n  box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5);\r\n  padding: 0px 30px 0px 30px;\r\n  color: #FFFFFF;\r\n  width: 520px;\r\n  height: 240px;\r\n}\r\n#nowebgpu a {\r\n  color: #FFFFFF;\r\n  font-style: italic;\r\n}", "",{"version":3,"sources":["webpack://./src/styles/site.css"],"names":[],"mappings":"AAAA;IACI,oCAAoC;AACxC;AACA;IACI,mCAAmC;AACvC;;AAEA;IACI,4DAA4D;IAC5D,WAAW;IACX,YAAY;AAChB;;CAEC;IACG,WAAW;IACX,gBAAgB,EAAE,oBAAoB;IACtC,WAAW;IACX,YAAY;CACf;;CAEA;IACG,iBAAiB;IACjB,aAAa;CAChB;;CAEA;IACG,aAAa;EACf;;EAEA;IACE,iBAAiB;IACjB,UAAU;IACV,oCAAoC;IACpC,SAAS;IACT,2BAA2B;IAC3B,eAAe;IACf,YAAY;IACZ,sBAAsB;EACxB;;EAEA;IACE,qMAAqM;IACrM,YAAY;IACZ,yBAAyB;IACzB,0BAA0B;IAC1B,kDAAkD;EACpD;;EAEA;IACE;MACE,2BAA2B;IAC7B;IACA;MACE,wBAAwB;IAC1B;AACJ;;AAEA;EACE,kBAAkB;EAClB,cAAc;EACd,QAAQ;EACR,SAAS;EACT,yBAAyB;AAC3B;;AAEA;EACE,mBAAmB;EACnB,2BAA2B;EAC3B,2BAA2B;EAC3B,qDAAqD;EACrD,6CAA6C;EAC7C,0BAA0B;EAC1B,cAAc;EACd,YAAY;EACZ,aAAa;AACf;AACA;EACE,cAAc;EACd,kBAAkB;AACpB","sourcesContent":[".ui-widget-content {\r\n    background: rgba(0.0, 0.0, 0.0, 0.8);\r\n}\r\n.ui-widget-header {\r\n    background: rgba(51, 51, 51, 0.493);\r\n}\r\n \r\nhtml {\r\n    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\r\n    width: 100%;\r\n    height: 100%;\r\n}\r\n\r\n body {\r\n    margin: 0px;\r\n    overflow: hidden; /* Hide scrollbars */\r\n    width: 100%;\r\n    height: 100%;\r\n }\r\n\r\n .time-range {\r\n    font-weight: bold;\r\n    color: orange;\r\n }\r\n\r\n .no-close .ui-dialog-titlebar-close {\r\n    display: none;\r\n  }\r\n\r\n  #footer {\r\n    position:absolute;\r\n    width:100%;\r\n    background: rgba(0.0, 0.0, 0.0, 0.8);\r\n    bottom: 0;\r\n    padding: 8px 15px 10px 15px;\r\n    font-size:small;\r\n    color: white;\r\n    box-sizing: border-box;\r\n  }\r\n\r\n  body.error {\r\n    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);\r\n    height: 50vh;\r\n    background-color: #af000f;\r\n    background-size: 20px 20px;\r\n    animation: progress-bar-stripes 1s linear infinite;\r\n  }\r\n  \r\n  @keyframes progress-bar-stripes {\r\n    0% {\r\n      background-position: 40px 0;\r\n    }\r\n    100% {\r\n      background-position: 0 0;\r\n    }\r\n}\r\n\r\n.positionable {\r\n  position: absolute;\r\n  display: block;\r\n  right: 0;\r\n  bottom: 0;\r\n  background-color: #bcd5e6;\r\n}\r\n\r\n#nowebgpu {\r\n  border-radius: 10px;\r\n  background-color: #af000fd8;\r\n  border: solid 5px #ffffff96;\r\n  -webkit-box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5); \r\n  box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5);\r\n  padding: 0px 30px 0px 30px;\r\n  color: #FFFFFF;\r\n  width: 520px;\r\n  height: 240px;\r\n}\r\n#nowebgpu a {\r\n  color: #FFFFFF;\r\n  font-style: italic;\r\n}"],"sourceRoot":""}]);
+___CSS_LOADER_EXPORT___.push([module.id, ".ui-widget-content {\r\n    background: rgba(0.0, 0.0, 0.0, 0.8);\r\n}\r\n.ui-widget-header {\r\n    background: rgba(51, 51, 51, 0.493);\r\n}\r\n \r\nhtml {\r\n    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\r\n    width: 100%;\r\n    height: 100%;\r\n}\r\n\r\n body {\r\n    margin: 0px;\r\n    overflow: hidden; /* Hide scrollbars */\r\n    width: 100%;\r\n    height: 100%;\r\n }\r\n\r\n .time-range {\r\n    font-weight: bold;\r\n    color: orange;\r\n }\r\n\r\n .no-close .ui-dialog-titlebar-close {\r\n    display: none;\r\n  }\r\n\r\n#pbLoading {\r\n  margin: 10px 0px 10px 0px;\r\n}\r\n#tblLoading td {\r\n  vertical-align: center;\r\n  padding: 0px 3px 0px 3px;\r\n}\r\n#tblLoading tr.done {\r\n  opacity: 0.3;\r\n}\r\n#tblLoading tr > td:nth-child(2) {\r\n  padding-bottom: 5px;\r\n}\r\n#spLoading.animated {\r\n  animation: rotation 2s infinite linear;\r\n}\r\n@keyframes rotation {\r\n  from {\r\n    transform: rotate(0deg);\r\n  }\r\n  to {\r\n    transform: rotate(359deg);\r\n  }\r\n}\r\n\r\n  #footer {\r\n    position:absolute;\r\n    width:100%;\r\n    background: rgba(0.0, 0.0, 0.0, 0.8);\r\n    bottom: 0;\r\n    padding: 8px 15px 10px 15px;\r\n    font-size:small;\r\n    color: white;\r\n    box-sizing: border-box;\r\n  }\r\n\r\n  body.error {\r\n    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);\r\n    height: 50vh;\r\n    background-color: #af000f;\r\n    background-size: 10px 10px;\r\n    animation: progress-bar-stripes 1s linear infinite;\r\n  }\r\n\r\n  body.loading {\r\n    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);\r\n    height: 50vh;\r\n    background-color: #bb4805;\r\n    background-size: 10px 10px;\r\n    animation: progress-bar-stripes 1s linear infinite;\r\n  }\r\n  \r\n  @keyframes progress-bar-stripes {\r\n    0% {\r\n      background-position: 20px 0;\r\n    }\r\n    100% {\r\n      background-position: 0 0;\r\n    }\r\n}\r\n\r\n.positionable {\r\n  position: absolute;\r\n  display: block;\r\n  right: 0;\r\n  bottom: 0;\r\n  background-color: #bcd5e6;\r\n}\r\n\r\n#nowebgpu {\r\n  border-radius: 10px;\r\n  background-color: #af000fd8;\r\n  border: solid 5px #ffffff96;\r\n  -webkit-box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5); \r\n  box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5);\r\n  padding: 0px 30px 0px 30px;\r\n  color: #FFFFFF;\r\n  width: 520px;\r\n  height: 240px;\r\n}\r\n#nowebgpu a {\r\n  color: #FFFFFF;\r\n  font-style: italic;\r\n}", "",{"version":3,"sources":["webpack://./src/styles/site.css"],"names":[],"mappings":"AAAA;IACI,oCAAoC;AACxC;AACA;IACI,mCAAmC;AACvC;;AAEA;IACI,4DAA4D;IAC5D,WAAW;IACX,YAAY;AAChB;;CAEC;IACG,WAAW;IACX,gBAAgB,EAAE,oBAAoB;IACtC,WAAW;IACX,YAAY;CACf;;CAEA;IACG,iBAAiB;IACjB,aAAa;CAChB;;CAEA;IACG,aAAa;EACf;;AAEF;EACE,yBAAyB;AAC3B;AACA;EACE,sBAAsB;EACtB,wBAAwB;AAC1B;AACA;EACE,YAAY;AACd;AACA;EACE,mBAAmB;AACrB;AACA;EACE,sCAAsC;AACxC;AACA;EACE;IACE,uBAAuB;EACzB;EACA;IACE,yBAAyB;EAC3B;AACF;;EAEE;IACE,iBAAiB;IACjB,UAAU;IACV,oCAAoC;IACpC,SAAS;IACT,2BAA2B;IAC3B,eAAe;IACf,YAAY;IACZ,sBAAsB;EACxB;;EAEA;IACE,qMAAqM;IACrM,YAAY;IACZ,yBAAyB;IACzB,0BAA0B;IAC1B,kDAAkD;EACpD;;EAEA;IACE,qMAAqM;IACrM,YAAY;IACZ,yBAAyB;IACzB,0BAA0B;IAC1B,kDAAkD;EACpD;;EAEA;IACE;MACE,2BAA2B;IAC7B;IACA;MACE,wBAAwB;IAC1B;AACJ;;AAEA;EACE,kBAAkB;EAClB,cAAc;EACd,QAAQ;EACR,SAAS;EACT,yBAAyB;AAC3B;;AAEA;EACE,mBAAmB;EACnB,2BAA2B;EAC3B,2BAA2B;EAC3B,qDAAqD;EACrD,6CAA6C;EAC7C,0BAA0B;EAC1B,cAAc;EACd,YAAY;EACZ,aAAa;AACf;AACA;EACE,cAAc;EACd,kBAAkB;AACpB","sourcesContent":[".ui-widget-content {\r\n    background: rgba(0.0, 0.0, 0.0, 0.8);\r\n}\r\n.ui-widget-header {\r\n    background: rgba(51, 51, 51, 0.493);\r\n}\r\n \r\nhtml {\r\n    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\r\n    width: 100%;\r\n    height: 100%;\r\n}\r\n\r\n body {\r\n    margin: 0px;\r\n    overflow: hidden; /* Hide scrollbars */\r\n    width: 100%;\r\n    height: 100%;\r\n }\r\n\r\n .time-range {\r\n    font-weight: bold;\r\n    color: orange;\r\n }\r\n\r\n .no-close .ui-dialog-titlebar-close {\r\n    display: none;\r\n  }\r\n\r\n#pbLoading {\r\n  margin: 10px 0px 10px 0px;\r\n}\r\n#tblLoading td {\r\n  vertical-align: center;\r\n  padding: 0px 3px 0px 3px;\r\n}\r\n#tblLoading tr.done {\r\n  opacity: 0.3;\r\n}\r\n#tblLoading tr > td:nth-child(2) {\r\n  padding-bottom: 5px;\r\n}\r\n#spLoading.animated {\r\n  animation: rotation 2s infinite linear;\r\n}\r\n@keyframes rotation {\r\n  from {\r\n    transform: rotate(0deg);\r\n  }\r\n  to {\r\n    transform: rotate(359deg);\r\n  }\r\n}\r\n\r\n  #footer {\r\n    position:absolute;\r\n    width:100%;\r\n    background: rgba(0.0, 0.0, 0.0, 0.8);\r\n    bottom: 0;\r\n    padding: 8px 15px 10px 15px;\r\n    font-size:small;\r\n    color: white;\r\n    box-sizing: border-box;\r\n  }\r\n\r\n  body.error {\r\n    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);\r\n    height: 50vh;\r\n    background-color: #af000f;\r\n    background-size: 10px 10px;\r\n    animation: progress-bar-stripes 1s linear infinite;\r\n  }\r\n\r\n  body.loading {\r\n    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);\r\n    height: 50vh;\r\n    background-color: #bb4805;\r\n    background-size: 10px 10px;\r\n    animation: progress-bar-stripes 1s linear infinite;\r\n  }\r\n  \r\n  @keyframes progress-bar-stripes {\r\n    0% {\r\n      background-position: 20px 0;\r\n    }\r\n    100% {\r\n      background-position: 0 0;\r\n    }\r\n}\r\n\r\n.positionable {\r\n  position: absolute;\r\n  display: block;\r\n  right: 0;\r\n  bottom: 0;\r\n  background-color: #bcd5e6;\r\n}\r\n\r\n#nowebgpu {\r\n  border-radius: 10px;\r\n  background-color: #af000fd8;\r\n  border: solid 5px #ffffff96;\r\n  -webkit-box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5); \r\n  box-shadow: 0px 0px 15px -2px rgba(0,0,0,0.5);\r\n  padding: 0px 30px 0px 30px;\r\n  color: #FFFFFF;\r\n  width: 520px;\r\n  height: 240px;\r\n}\r\n#nowebgpu a {\r\n  color: #FFFFFF;\r\n  font-style: italic;\r\n}"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -30140,6 +30140,16 @@ return jQuery;
 
 /***/ }),
 
+/***/ "./node_modules/lzma/src/lzma-d-min.js":
+/*!*********************************************!*\
+  !*** ./node_modules/lzma/src/lzma-d-min.js ***!
+  \*********************************************/
+/***/ (function() {
+
+var e=function(){"use strict";function r(e,r){postMessage({action:nr,cbn:r,result:e})}function o(e){var r=[];return r[e-1]=void 0,r}function n(e,r){return i(e[0]+r[0],e[1]+r[1])}function t(e,r){var o,n;return e[0]==r[0]&&e[1]==r[1]?0:(o=0>e[1],n=0>r[1],o&&!n?-1:!o&&n?1:d(e,r)[1]<0?-1:1)}function i(e,r){var o,n;for(r%=0x10000000000000000,e%=0x10000000000000000,o=r%ir,n=Math.floor(e/ir)*ir,r=r-o+n,e=e-n+o;0>e;)e+=ir,r-=ir;for(;e>4294967295;)e-=ir,r+=ir;for(r%=0x10000000000000000;r>0x7fffffff00000000;)r-=0x10000000000000000;for(;-0x8000000000000000>r;)r+=0x10000000000000000;return[e,r]}function u(e){return e>=0?[e,0]:[e+ir,-ir]}function s(e){return e[0]>=2147483648?~~Math.max(Math.min(e[0]-ir,2147483647),-2147483648):~~Math.max(Math.min(e[0],2147483647),-2147483648)}function d(e,r){return i(e[0]-r[0],e[1]-r[1])}function c(e,r){return e.ab=r,e.cb=0,e.O=r.length,e}function m(e){return e.cb>=e.O?-1:255&e.ab[e.cb++]}function a(e){return e.ab=o(32),e.O=0,e}function _(e){var r=e.ab;return r.length=e.O,r}function f(e,r,o,n){p(r,o,e.ab,e.O,n),e.O+=n}function p(e,r,o,n,t){for(var i=0;t>i;++i)o[n+i]=e[r+i]}function D(e,r,o){var n,t,i,s,d="",c=[];for(t=0;5>t;++t){if(i=m(r),-1==i)throw Error("truncated input");c[t]=i<<24>>24}if(n=N({}),!z(n,c))throw Error("corrupted input");for(t=0;64>t;t+=8){if(i=m(r),-1==i)throw Error("truncated input");i=i.toString(16),1==i.length&&(i="0"+i),d=i+""+d}/^0+$|^f+$/i.test(d)?e.N=ur:(s=parseInt(d,16),e.N=s>4294967295?ur:u(s)),e.Q=B(n,r,o,e.N)}function l(e,r){return e.S=a({}),D(e,c({},r),e.S),e}function g(e,r,o){var n=e.D-r-1;for(0>n&&(n+=e.c);0!=o;--o)n>=e.c&&(n=0),e.x[e.D++]=e.x[n++],e.D>=e.c&&w(e)}function v(e,r){(null==e.x||e.c!=r)&&(e.x=o(r)),e.c=r,e.D=0,e.w=0}function w(e){var r=e.D-e.w;r&&(f(e.V,e.x,e.w,r),e.D>=e.c&&(e.D=0),e.w=e.D)}function R(e,r){var o=e.D-r-1;return 0>o&&(o+=e.c),e.x[o]}function h(e,r){e.x[e.D++]=r,e.D>=e.c&&w(e)}function P(e){w(e),e.V=null}function C(e){return e-=2,4>e?e:3}function S(e){return 4>e?0:10>e?e-3:e-6}function M(e,r){return e.h=r,e.bb=null,e.X=1,e}function L(e){if(!e.X)throw Error("bad state");if(e.bb)throw Error("No encoding");return y(e),e.X}function y(e){var r=I(e.h);if(-1==r)throw Error("corrupted input");e.$=ur,e.Z=e.h.d,(r||t(e.h.U,sr)>=0&&t(e.h.d,e.h.U)>=0)&&(w(e.h.b),P(e.h.b),e.h.a.K=null,e.X=0)}function B(e,r,o,n){return e.a.K=r,P(e.b),e.b.V=o,b(e),e.f=0,e.l=0,e.T=0,e.R=0,e._=0,e.U=n,e.d=sr,e.I=0,M({},e)}function I(e){var r,o,i,d,c,m;if(m=s(e.d)&e.P,Q(e.a,e.q,(e.f<<4)+m)){if(Q(e.a,e.E,e.f))i=0,Q(e.a,e.s,e.f)?(Q(e.a,e.u,e.f)?(Q(e.a,e.r,e.f)?(o=e._,e._=e.R):o=e.R,e.R=e.T):o=e.T,e.T=e.l,e.l=o):Q(e.a,e.n,(e.f<<4)+m)||(e.f=7>e.f?9:11,i=1),i||(i=x(e.o,e.a,m)+2,e.f=7>e.f?8:11);else if(e._=e.R,e.R=e.T,e.T=e.l,i=2+x(e.C,e.a,m),e.f=7>e.f?7:10,c=q(e.j[C(i)],e.a),c>=4){if(d=(c>>1)-1,e.l=(2|1&c)<<d,14>c)e.l+=J(e.J,e.l-c-1,e.a,d);else if(e.l+=U(e.a,d-4)<<4,e.l+=F(e.t,e.a),0>e.l)return-1==e.l?1:-1}else e.l=c;if(t(u(e.l),e.d)>=0||e.l>=e.m)return-1;g(e.b,e.l,i),e.d=n(e.d,u(i)),e.I=R(e.b,0)}else r=Z(e.k,s(e.d),e.I),e.I=7>e.f?T(r,e.a):$(r,e.a,R(e.b,e.l)),h(e.b,e.I),e.f=S(e.f),e.d=n(e.d,dr);return 0}function N(e){e.b={},e.a={},e.q=o(192),e.E=o(12),e.s=o(12),e.u=o(12),e.r=o(12),e.n=o(192),e.j=o(4),e.J=o(114),e.t=K({},4),e.C=G({}),e.o=G({}),e.k={};for(var r=0;4>r;++r)e.j[r]=K({},6);return e}function b(e){e.b.w=0,e.b.D=0,X(e.q),X(e.n),X(e.E),X(e.s),X(e.u),X(e.r),X(e.J),H(e.k);for(var r=0;4>r;++r)X(e.j[r].B);A(e.C),A(e.o),X(e.t.B),V(e.a)}function z(e,r){var o,n,t,i,u,s,d;if(5>r.length)return 0;for(d=255&r[0],t=d%9,s=~~(d/9),i=s%5,u=~~(s/5),o=0,n=0;4>n;++n)o+=(255&r[1+n])<<8*n;return o>99999999||!W(e,t,i,u)?0:O(e,o)}function O(e,r){return 0>r?0:(e.z!=r&&(e.z=r,e.m=Math.max(e.z,1),v(e.b,Math.max(e.m,4096))),1)}function W(e,r,o,n){if(r>8||o>4||n>4)return 0;E(e.k,o,r);var t=1<<n;return k(e.C,t),k(e.o,t),e.P=t-1,1}function k(e,r){for(;r>e.e;++e.e)e.G[e.e]=K({},3),e.H[e.e]=K({},3)}function x(e,r,o){if(!Q(r,e.M,0))return q(e.G[o],r);var n=8;return n+=Q(r,e.M,1)?8+q(e.L,r):q(e.H[o],r)}function G(e){return e.M=o(2),e.G=o(16),e.H=o(16),e.L=K({},8),e.e=0,e}function A(e){X(e.M);for(var r=0;e.e>r;++r)X(e.G[r].B),X(e.H[r].B);X(e.L.B)}function E(e,r,n){var t,i;if(null==e.F||e.g!=n||e.y!=r)for(e.y=r,e.Y=(1<<r)-1,e.g=n,i=1<<e.g+e.y,e.F=o(i),t=0;i>t;++t)e.F[t]=j({})}function Z(e,r,o){return e.F[((r&e.Y)<<e.g)+((255&o)>>>8-e.g)]}function H(e){var r,o;for(o=1<<e.g+e.y,r=0;o>r;++r)X(e.F[r].v)}function T(e,r){var o=1;do o=o<<1|Q(r,e.v,o);while(256>o);return o<<24>>24}function $(e,r,o){var n,t,i=1;do if(t=o>>7&1,o<<=1,n=Q(r,e.v,(1+t<<8)+i),i=i<<1|n,t!=n){for(;256>i;)i=i<<1|Q(r,e.v,i);break}while(256>i);return i<<24>>24}function j(e){return e.v=o(768),e}function K(e,r){return e.A=r,e.B=o(1<<r),e}function q(e,r){var o,n=1;for(o=e.A;0!=o;--o)n=(n<<1)+Q(r,e.B,n);return n-(1<<e.A)}function F(e,r){var o,n,t=1,i=0;for(n=0;e.A>n;++n)o=Q(r,e.B,t),t<<=1,t+=o,i|=o<<n;return i}function J(e,r,o,n){var t,i,u=1,s=0;for(i=0;n>i;++i)t=Q(o,e,r+u),u<<=1,u+=t,s|=t<<i;return s}function Q(e,r,o){var n,t=r[o];return n=(e.i>>>11)*t,(-2147483648^n)>(-2147483648^e.p)?(e.i=n,r[o]=t+(2048-t>>>5)<<16>>16,-16777216&e.i||(e.p=e.p<<8|m(e.K),e.i<<=8),0):(e.i-=n,e.p-=n,r[o]=t-(t>>>5)<<16>>16,-16777216&e.i||(e.p=e.p<<8|m(e.K),e.i<<=8),1)}function U(e,r){var o,n,t=0;for(o=r;0!=o;--o)e.i>>>=1,n=e.p-e.i>>>31,e.p-=e.i&n-1,t=t<<1|1-n,-16777216&e.i||(e.p=e.p<<8|m(e.K),e.i<<=8);return t}function V(e){e.p=0,e.i=-1;for(var r=0;5>r;++r)e.p=e.p<<8|m(e.K)}function X(e){for(var r=e.length-1;r>=0;--r)e[r]=1024}function Y(e){for(var r,o,n,t=0,i=0,u=e.length,s=[],d=[];u>t;++t,++i){if(r=255&e[t],128&r)if(192==(224&r)){if(t+1>=u)return e;if(o=255&e[++t],128!=(192&o))return e;d[i]=(31&r)<<6|63&o}else{if(224!=(240&r))return e;if(t+2>=u)return e;if(o=255&e[++t],128!=(192&o))return e;if(n=255&e[++t],128!=(192&n))return e;d[i]=(15&r)<<12|(63&o)<<6|63&n}else{if(!r)return e;d[i]=r}16383==i&&(s.push(String.fromCharCode.apply(String,d)),i=-1)}return i>0&&(d.length=i,s.push(String.fromCharCode.apply(String,d))),s.join("")}function er(e){return e[1]+e[0]}function rr(e,o,n){function t(){try{for(var e,r=0,u=(new Date).getTime();L(c.d.Q);)if(++r%1e3==0&&(new Date).getTime()-u>200)return s&&(i=er(c.d.Q.h.d)/d,n(i)),tr(t,0),0;n(1),e=Y(_(c.d.S)),tr(o.bind(null,e),0)}catch(m){o(null,m)}}var i,u,s,d,c={},m=void 0===o&&void 0===n;if("function"!=typeof o&&(u=o,o=n=0),n=n||function(e){return void 0!==u?r(s?e:-1,u):void 0},o=o||function(e,r){return void 0!==u?postMessage({action:or,cbn:u,result:e,error:r}):void 0},m){for(c.d=l({},e);L(c.d.Q););return Y(_(c.d.S))}try{c.d=l({},e),d=er(c.d.N),s=d>-1,n(0)}catch(a){return o(null,a)}tr(t,0)}var or=2,nr=3,tr="function"==typeof setImmediate?setImmediate:setTimeout,ir=4294967296,ur=[4294967295,-ir],sr=[0,0],dr=[1,0];return"undefined"==typeof onmessage||"undefined"!=typeof window&&void 0!==window.document||!function(){onmessage=function(r){r&&r.W&&r.W.action==or&&e.decompress(r.W.W,r.W.cbn)}}(),{decompress:rr}}();this.LZMA=this.LZMA_WORKER=e;
+
+/***/ }),
+
 /***/ "./src/styles/site.css":
 /*!*****************************!*\
   !*** ./src/styles/site.css ***!
@@ -30507,6 +30517,130 @@ module.exports = styleTagTransform;
 
 /***/ }),
 
+/***/ "./src/datafetcher.ts":
+/*!****************************!*\
+  !*** ./src/datafetcher.ts ***!
+  \****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "fetchAndUnpackData": () => (/* binding */ fetchAndUnpackData)
+/* harmony export */ });
+/* harmony import */ var _helper__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./helper */ "./src/helper.ts");
+/* harmony import */ var _ui__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./ui */ "./src/ui.ts");
+const lzma = __webpack_require__(/*! ../node_modules/lzma/src/lzma-d-min.js */ "./node_modules/lzma/src/lzma-d-min.js");
+
+
+let bufferTime = 0.0;
+let successFunction;
+let failureFunction;
+const DISCRETIZE_TEMPERATURE_RESOLUTION = 1;
+const decompressData = (data) => {
+    bufferTime = performance.now();
+    lzma.LZMA.decompress(data, function on_finish(res, error) {
+        if (!res) {
+            failureFunction("LZMA decompression failed with error message :" + error);
+        }
+        else {
+            res = new Uint8Array(res);
+            let speed = (0,_helper__WEBPACK_IMPORTED_MODULE_0__.formatMilliseconds)(performance.now() - bufferTime);
+            _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogAddHistory(`LZMA Decompression [${(res.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
+            unbinData(res.buffer);
+        }
+    });
+};
+const unbinData = (data) => {
+    bufferTime = performance.now();
+    _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogProgress(0);
+    _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogLabel("Unbinning of binary data");
+    let dv = new DataView(data);
+    let boundsdate = [
+        new Date(dv.getUint16(0, false), dv.getUint8(2), dv.getUint8(3)),
+        new Date(dv.getUint16(4, false), dv.getUint8(6), dv.getUint8(7))
+    ];
+    let boundsavgt = [dv.getFloat32(8, false), dv.getFloat32(12, false)];
+    let lenTemperatures = dv.getUint32(16);
+    let lenPositions = dv.getUint16(20);
+    let lenCountries = dv.getUint8(22);
+    // Read position LUT
+    let db = {
+        'boundsdate': boundsdate,
+        'boundsavgt': boundsavgt,
+        'positions': new Array(lenPositions),
+        'temperatures': new Array(lenTemperatures)
+    };
+    let offset = 23;
+    for (let i = 0; i < lenPositions; i++) {
+        db['positions'][i] = {
+            'x': dv.getFloat32(offset, false),
+            'y': dv.getFloat32(offset + 4, false)
+        };
+        offset += 8;
+    }
+    // Read temperature db
+    let avgtspan = boundsavgt[1] - boundsavgt[0];
+    let maxdisnumber = Math.pow(2, (DISCRETIZE_TEMPERATURE_RESOLUTION * 8)) - 1;
+    let lastReportedProgress = -1;
+    for (let i = 0; i < lenTemperatures; i++) {
+        db['temperatures'][i] = {
+            'dd': dv.getUint32(offset),
+            'pid': dv.getUint16(offset + 4),
+            'avgtdis': dv.getUint8(offset + 6),
+            'avgt': (dv.getUint8(offset + 6) * avgtspan / maxdisnumber) + boundsavgt[0],
+            'src': dv.getUint8(offset + 6 + DISCRETIZE_TEMPERATURE_RESOLUTION)
+        };
+        offset += 7 + DISCRETIZE_TEMPERATURE_RESOLUTION;
+        let currentProgress = Math.round(i / lenTemperatures * 100);
+        if (currentProgress > lastReportedProgress) {
+            lastReportedProgress = currentProgress;
+            _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogProgress(lastReportedProgress);
+        }
+    }
+    let speed = (0,_helper__WEBPACK_IMPORTED_MODULE_0__.formatMilliseconds)(performance.now() - bufferTime);
+    _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogAddHistory(`Read ${(db.temperatures.length / 1000000).toFixed(2)}M entries @ ${db.positions.length} locations [${speed}]`);
+    successFunction(db);
+};
+const fetchAndUnpackData = (on_finish, on_failure) => {
+    successFunction = on_finish;
+    failureFunction = on_failure;
+    bufferTime = performance.now();
+    var oReq = new XMLHttpRequest();
+    oReq.open("GET", "cdata.lzma", true);
+    oReq.responseType = "arraybuffer";
+    _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogLabel("Fetching dataset");
+    oReq.onerror = function () {
+        failureFunction("Critical Network Error: Couldnt fetch database file");
+    };
+    oReq.onprogress = function (event) {
+        if (event.lengthComputable) {
+            _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogProgress(event.loaded / event.total);
+        }
+        else {
+            _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogLabel(`Fetching dataset [${event.loaded} bytes]`);
+        }
+    };
+    oReq.onload = function (oEvent) {
+        if (oReq.status != 200) {
+            failureFunction(`Error while fetching dataset: ${oReq.status} - ${oReq.statusText}`);
+        }
+        else {
+            //Successfully fetched file:
+            let binInputData = new Uint8Array(oReq.response);
+            let speed = (0,_helper__WEBPACK_IMPORTED_MODULE_0__.formatMilliseconds)(performance.now() - bufferTime);
+            _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogAddHistory(`Fetched dataset [${(binInputData.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
+            _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogProgress(-1);
+            _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogLabel("LZMA decompression of data");
+            decompressData(binInputData);
+        }
+    };
+    oReq.send();
+};
+
+
+/***/ }),
+
 /***/ "./src/helper.ts":
 /*!***********************!*\
   !*** ./src/helper.ts ***!
@@ -30517,85 +30651,25 @@ module.exports = styleTagTransform;
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "CheckWebGPU": () => (/* binding */ CheckWebGPU),
-/* harmony export */   "InitUserInterface": () => (/* binding */ InitUserInterface),
-/* harmony export */   "ShowNoWebGpuWarning": () => (/* binding */ ShowNoWebGpuWarning)
+/* harmony export */   "formatMilliseconds": () => (/* binding */ formatMilliseconds)
 /* harmony export */ });
-/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
-/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var jquery_ui_dist_jquery_ui__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! jquery-ui-dist/jquery-ui */ "./node_modules/jquery-ui-dist/jquery-ui.js");
-/* harmony import */ var jquery_ui_dist_jquery_ui__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(jquery_ui_dist_jquery_ui__WEBPACK_IMPORTED_MODULE_1__);
-
-
-// Shows the error message when webgpu is not available on current browser
-const ShowNoWebGpuWarning = () => {
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#nowebgpu").position({ my: "center center", at: "center center", of: window }).fadeIn(800);
-};
-// Internal function to handle keydown events.
-const keyDownHandler = (e) => {
-    if (e.keyCode == 85) { // Key: U
-        // Hide/Show UI
-        let isShown = jquery__WEBPACK_IMPORTED_MODULE_0___default()("#dialog").dialog("isOpen");
-        if (isShown) {
-            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#dialog").dialog("close");
-            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#footer").fadeOut(800);
-        }
-        else {
-            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#dialog").dialog("open");
-            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#footer").fadeIn(800);
-        }
-    }
-};
-// Initializes the jQuery UI elements (Should be called once at dom load)
-const InitUserInterface = () => {
-    const canvas = jquery__WEBPACK_IMPORTED_MODULE_0___default()("#canvas-webgpu").get(0);
-    if (canvas) {
-        function windowResize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        ;
-        window.addEventListener('resize', windowResize);
-        window.addEventListener('keydown', keyDownHandler);
-        windowResize();
-    }
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#dialog").dialog({
-        position: { my: "left top", at: "left+10 top+10", of: window },
-        dialogClass: "no-close",
-        autoOpen: false,
-        show: {
-            effect: "drop",
-            duration: 800
-        },
-        hide: {
-            effect: "drop",
-            duration: 800
-        }
-    });
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#s-tra").slider({
-        range: true,
-        min: 1800,
-        max: 2020,
-        values: [1850, 1890],
-        slide: function (_event, ui) {
-            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#lbl-tra").html(ui.values[0] + " - " + ui.values[1]);
-        }
-    });
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#s-trb").slider({
-        range: true,
-        min: 1800,
-        max: 2020,
-        values: [1950, 1990],
-        slide: function (_event, ui) {
-            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#lbl-trb").html(ui.values[0] + " - " + ui.values[1]);
-        }
-    });
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#s-compare").selectmenu();
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#dialog").dialog("open");
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#footer").fadeIn(800);
-};
 // Returns true if current browser supports WebGPU
 const CheckWebGPU = () => {
     return "gpu" in navigator;
+};
+const formatMilliseconds = (s) => {
+    if (s < 1000) {
+        return `${s.toFixed(0)} ms`;
+    }
+    else if (s < 60000) {
+        return `${(s / 1000).toFixed(2)} s`;
+    }
+    else if (s < 3600000) {
+        return `${(s / 60000).toFixed(2)} min`;
+    }
+    else {
+        return `${(s / 3600000).toFixed(2)} h`;
+    }
 };
 
 
@@ -30672,6 +30746,150 @@ const RenderTriangle = () => __awaiter(void 0, void 0, void 0, function* () {
     renderPass.end();
     device.queue.submit([commandEncoder.finish()]);
 });
+
+
+/***/ }),
+
+/***/ "./src/ui.ts":
+/*!*******************!*\
+  !*** ./src/ui.ts ***!
+  \*******************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "InitUserInterface": () => (/* binding */ InitUserInterface),
+/* harmony export */   "ShowNoWebGpuWarning": () => (/* binding */ ShowNoWebGpuWarning),
+/* harmony export */   "loadingDialogAddHistory": () => (/* binding */ loadingDialogAddHistory),
+/* harmony export */   "loadingDialogError": () => (/* binding */ loadingDialogError),
+/* harmony export */   "loadingDialogLabel": () => (/* binding */ loadingDialogLabel),
+/* harmony export */   "loadingDialogProgress": () => (/* binding */ loadingDialogProgress),
+/* harmony export */   "loadingDialogSuccess": () => (/* binding */ loadingDialogSuccess),
+/* harmony export */   "showCanvas": () => (/* binding */ showCanvas),
+/* harmony export */   "showFooter": () => (/* binding */ showFooter),
+/* harmony export */   "showMainMenu": () => (/* binding */ showMainMenu)
+/* harmony export */ });
+/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
+/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var jquery_ui_dist_jquery_ui__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! jquery-ui-dist/jquery-ui */ "./node_modules/jquery-ui-dist/jquery-ui.js");
+/* harmony import */ var jquery_ui_dist_jquery_ui__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(jquery_ui_dist_jquery_ui__WEBPACK_IMPORTED_MODULE_1__);
+
+
+// Shows the error message when webgpu is not available on current browser
+const ShowNoWebGpuWarning = () => {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("body").addClass("error").removeClass("loading");
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#nowebgpu").position({ my: "center center", at: "center center", of: window }).fadeIn(800);
+};
+// Internal function to handle keydown events.
+const keyDownHandler = (e) => {
+    if (e.keyCode == 85) { // Key: U
+        // Hide/Show UI
+        let isShown = jquery__WEBPACK_IMPORTED_MODULE_0___default()("#dialog").dialog("isOpen");
+        if (isShown) {
+            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#dialog").dialog("close");
+            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#footer").fadeOut(800);
+        }
+        else {
+            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#dialog").dialog("open");
+            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#footer").fadeIn(800);
+        }
+    }
+};
+// Initializes the jQuery UI elements (Should be called once at dom load)
+const InitUserInterface = () => {
+    const canvas = jquery__WEBPACK_IMPORTED_MODULE_0___default()("#canvas-webgpu").get(0);
+    if (canvas) {
+        function windowResize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        ;
+        window.addEventListener('resize', windowResize);
+        window.addEventListener('keydown', keyDownHandler);
+        windowResize();
+    }
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#loadingDialog").dialog({
+        position: { my: "center center", at: "center center", of: window },
+        autoOpen: true,
+        minWidth: 400,
+        hide: {
+            effect: "drop",
+            duration: 800
+        }
+    });
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#pbLoading").progressbar({
+        value: false
+    });
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mainMenu").dialog({
+        position: { my: "left top", at: "left+10 top+10", of: window },
+        dialogClass: "no-close",
+        autoOpen: false,
+        show: {
+            effect: "drop",
+            duration: 800
+        },
+        hide: {
+            effect: "drop",
+            duration: 800
+        }
+    });
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#s-tra").slider({
+        range: true,
+        min: 1800,
+        max: 2020,
+        values: [1850, 1890],
+        slide: function (_event, ui) {
+            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#lbl-tra").html(ui.values[0] + " - " + ui.values[1]);
+        }
+    });
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#s-trb").slider({
+        range: true,
+        min: 1800,
+        max: 2020,
+        values: [1950, 1990],
+        slide: function (_event, ui) {
+            jquery__WEBPACK_IMPORTED_MODULE_0___default()("#lbl-trb").html(ui.values[0] + " - " + ui.values[1]);
+        }
+    });
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#s-compare").selectmenu();
+};
+const showFooter = () => {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#footer").fadeIn(800);
+};
+const showMainMenu = () => {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mainMenu").dialog("open");
+};
+const showCanvas = () => {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#canvas-webgpu").fadeIn(800);
+};
+const loadingDialogAddHistory = (msg) => {
+    let html = `<tr class="done"><td><span class="material-symbols-outlined">check</span></td><td>${msg}</td></tr>`;
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#tblLoading .history").prepend(html);
+};
+const loadingDialogProgress = (val) => {
+    if (val < 0) {
+        jquery__WEBPACK_IMPORTED_MODULE_0___default()("#pbLoading").progressbar("option", { value: false });
+    }
+    else {
+        jquery__WEBPACK_IMPORTED_MODULE_0___default()("#pbLoading").progressbar("option", { value: val * 100 });
+    }
+};
+const loadingDialogLabel = (msg) => {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#lblLoading").html(msg + " ...");
+};
+const loadingDialogError = (msg) => {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#lblLoading").html(msg);
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#spLoading").removeClass("animated").html("error");
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#pbLoading").progressbar("option", { value: false, disabled: true });
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("body").addClass("error").removeClass("loading");
+};
+const loadingDialogSuccess = (msg) => {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#lblLoading").html(msg);
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#spLoading").removeClass("animated").html("done_all");
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()("#pbLoading").progressbar("option", { value: 0, disabled: true });
+    setTimeout(() => { jquery__WEBPACK_IMPORTED_MODULE_0___default()("#loadingDialog").dialog("close"); }, 800);
+};
 
 
 /***/ }),
@@ -30788,10 +31006,14 @@ var __webpack_exports__ = {};
   \*********************/
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _helper__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./helper */ "./src/helper.ts");
-/* harmony import */ var _styles_site_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./styles/site.css */ "./src/styles/site.css");
-/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
-/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _renderer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./renderer */ "./src/renderer.ts");
+/* harmony import */ var _ui__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./ui */ "./src/ui.ts");
+/* harmony import */ var _styles_site_css__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./styles/site.css */ "./src/styles/site.css");
+/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
+/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _renderer__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./renderer */ "./src/renderer.ts");
+/* harmony import */ var _datafetcher__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./datafetcher */ "./src/datafetcher.ts");
+
+
 
 
 
@@ -30801,18 +31023,27 @@ const main = () => {
     // Check whether WebGPU is available
     const gpuAvailable = (0,_helper__WEBPACK_IMPORTED_MODULE_0__.CheckWebGPU)();
     if (!gpuAvailable) {
-        jquery__WEBPACK_IMPORTED_MODULE_2___default()("body").addClass("error");
-        (0,_helper__WEBPACK_IMPORTED_MODULE_0__.ShowNoWebGpuWarning)();
+        _ui__WEBPACK_IMPORTED_MODULE_1__.ShowNoWebGpuWarning();
         throw ('Your current browser does not support WebGPU!');
     }
     // Initialize jQuery UI components, and show interface:
-    (0,_helper__WEBPACK_IMPORTED_MODULE_0__.InitUserInterface)();
-    (0,_renderer__WEBPACK_IMPORTED_MODULE_3__.RenderTriangle)();
-    window.addEventListener('resize', function () {
-        (0,_renderer__WEBPACK_IMPORTED_MODULE_3__.RenderTriangle)();
+    _ui__WEBPACK_IMPORTED_MODULE_1__.InitUserInterface();
+    _ui__WEBPACK_IMPORTED_MODULE_1__.showFooter();
+    _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogProgress(0.5);
+    (0,_datafetcher__WEBPACK_IMPORTED_MODULE_5__.fetchAndUnpackData)(function on_success(db) {
+        console.log(db);
+        _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogSuccess("We're all set and ready");
+        _ui__WEBPACK_IMPORTED_MODULE_1__.showMainMenu();
+        _ui__WEBPACK_IMPORTED_MODULE_1__.showCanvas();
+        (0,_renderer__WEBPACK_IMPORTED_MODULE_4__.RenderTriangle)();
+        window.addEventListener('resize', function () {
+            (0,_renderer__WEBPACK_IMPORTED_MODULE_4__.RenderTriangle)();
+        });
+    }, function on_failure(msg) {
+        _ui__WEBPACK_IMPORTED_MODULE_1__.loadingDialogError(msg);
     });
 };
-jquery__WEBPACK_IMPORTED_MODULE_2___default()(function () { main(); });
+jquery__WEBPACK_IMPORTED_MODULE_3___default()(function () { main(); });
 
 })();
 
