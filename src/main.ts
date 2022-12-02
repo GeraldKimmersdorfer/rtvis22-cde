@@ -1,6 +1,7 @@
+import './styles/styles.css';
+
 import { CheckWebGPU } from './helper';
 import * as ui from './ui'
-import "./styles/site.css";
 
 import $ from "jquery";
 import { RenderTriangle } from './renderer';

@@ -1,5 +1,10 @@
 import $ from "jquery";
-import "jquery-ui-dist/jquery-ui";
+
+require('jquery-ui/ui/widgets/dialog');
+require('jquery-ui/ui/widgets/progressbar');
+require('jquery-ui/ui/widgets/selectmenu');
+require('jquery-ui/ui/widgets/slider');
+
 
 // Shows the error message when webgpu is not available on current browser
 export const ShowNoWebGpuWarning = () => {
@@ -85,7 +90,7 @@ export const showFooter = () => {
     $("#footer").fadeIn(800);
 }
 
-export const showMainMenu = () => { 
+export const showMainMenu = () => {
     $( "#mainMenu" ).dialog( "open" );
 }
 

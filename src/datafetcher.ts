@@ -10,7 +10,7 @@ const DISCRETIZE_TEMPERATURE_RESOLUTION = 1;
 
 const decompressData = (data: Uint8Array) => {
     bufferTime = performance.now();
-    lzma.LZMA.decompress(data, 
+    lzma.LZMA.decompress(data,
         function on_finish(res: Uint8Array, error: string) {
             if (!res) {
                 failureFunction("LZMA decompression failed with error message :" + error)
@@ -22,7 +22,7 @@ const decompressData = (data: Uint8Array) => {
             }
         });
 }
-// NOTE: CHECK WHETER dMONTHS is enough 
+// NOTE: CHECK WHETER dMONTHS is enough
 const unbinData = (data: ArrayBuffer) => {
     bufferTime = performance.now();
     ui.loadingDialogProgress(0);
@@ -33,7 +33,7 @@ const unbinData = (data: ArrayBuffer) => {
         new Date(dv.getUint16(4, false), dv.getUint8(6), dv.getUint8(7))
     ];
     let boundsavgt = [ dv.getFloat32(8, false), dv.getFloat32(12, false) ];
-    
+
     let lenTemperatures = dv.getUint32(16);
     let lenPositions = dv.getUint16(20);
     let lenCountries = dv.getUint8(22);
@@ -51,7 +51,7 @@ const unbinData = (data: ArrayBuffer) => {
             'y': dv.getFloat32(offset+4, false)
         };
         offset += 8
-    }                                                                                                                                 
+    }
     // Read temperature db
     let avgtspan = boundsavgt[1] - boundsavgt[0];
     let maxdisnumber = 2**(DISCRETIZE_TEMPERATURE_RESOLUTION*8)-1;
@@ -65,7 +65,7 @@ const unbinData = (data: ArrayBuffer) => {
             'src': dv.getUint8(offset+6+DISCRETIZE_TEMPERATURE_RESOLUTION)
         };
         offset += 7+DISCRETIZE_TEMPERATURE_RESOLUTION
-        
+
         let currentProgress = Math.round(i / lenTemperatures * 100);
         if (currentProgress > lastReportedProgress) {
           lastReportedProgress = currentProgress;
@@ -82,7 +82,7 @@ export const fetchAndUnpackData = (on_finish:(data:any)=>void, on_failure:(msg:s
     failureFunction = on_failure;
     bufferTime = performance.now();
     var oReq = new XMLHttpRequest();
-    oReq.open("GET", "cdata.lzma", true);
+    oReq.open("GET", "assets/cdata.lzma", true);
     oReq.responseType = "arraybuffer";
     ui.loadingDialogLabel("Fetching dataset")
     oReq.onerror = function() {
