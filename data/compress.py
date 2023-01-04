@@ -7,7 +7,7 @@ filesource = "data/source/GlobalLandTemperaturesByCity.csv"
 #filesource = "data/source/GlobalLandTemperaturesByCity100k.csv"
 discretizeresolution = 2 # bytes for discretized temperature values
 
-filedest = "dist/cdataBig.lzma"
+filedest = "src/assets/cdata.lzma"
 progressrefreshevery = 1000
 
 import csv
@@ -15,7 +15,7 @@ from tqdm import tqdm
 from util import tolatlongfloat
 import time
 import struct
-import datetime
+from datetime import datetime
 import lzma
 import threading
 
@@ -31,8 +31,8 @@ positionlist = []
 countrymap = {}
 countrylist = []
 temperaturelist = []
-boundsdate = [datetime.datetime.now(), datetime.datetime.strptime("0001-01-01", "%Y-%m-%d")]
-boundsavgt = [100.0, -100.0]
+boundsdate = [datetime.max, datetime.min]
+boundsavgt = [float('inf'), -float('inf')]
 with open(filesource, 'r', encoding="utf-8") as read_obj:
     # Read Header and check if correct
     header = read_obj.readline().strip()
@@ -44,7 +44,7 @@ with open(filesource, 'r', encoding="utf-8") as read_obj:
     for row in csv_reader:
         i += 1
         titem = {}
-        titem['dt'] = datetime.datetime.strptime(row[0], "%Y-%m-%d")
+        titem['dt'] = datetime.strptime(row[0], "%Y-%m-%d")
         boundsdate = [min(titem['dt'], boundsdate[0]), max(titem['dt'], boundsdate[1])]
 
         titem['src'] = 0
@@ -118,10 +118,7 @@ R = 1.0     #earth radius
 mapwidth = 1.0
 mapheight = 1.0
 for val in positionlist:
-    #ToDo calculate x,y equirectangular projection
-    lat,long = tolatlongfloat(val['lat'], val['long'])
-    val['x'] = (long + 180) * (mapwidth / 360)
-    val['y'] = (lat + 90) * (mapheight / 180)
+    val['y'], val['x'] = tolatlongfloat(val['lat'], val['long'])
 
 #ToDo: Interpolate all temp where src = 1
 
@@ -157,8 +154,8 @@ for val in positionlist:                                                 # len(p
 
 progressbar = tqdm(total=len(temperaturelist), unit=" lines", unit_scale=True, desc="Writing temperature data")
 for i, itm in enumerate(temperaturelist):
-    ddates = (itm['dt'] - boundsdate[0]).days
-    bdata.extend(ddates.to_bytes(4, "big", signed=False))            # 4 byte
+    delta_months = (itm['dt'].year - boundsdate[0].year) * 12 + (itm['dt'].month - boundsdate[0].month)
+    bdata.extend(delta_months.to_bytes(2, "big", signed=False))            # 2 byte
     bdata.extend(itm['pid'].to_bytes(2, "big", signed=False))             # 2 byte
     #bdata.extend(struct.pack(">f", itm['avgt']))                            # 4 byte
     bdata.extend(itm['avgtdis'].to_bytes(discretizeresolution, "big", signed=False))

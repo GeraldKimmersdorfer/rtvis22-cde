@@ -58,13 +58,13 @@ const unbinData = (data: ArrayBuffer) => {
     let lastReportedProgress = -1;
     for (let i = 0; i < lenTemperatures; i++) {
         db['temperatures'][i] = {
-            'dd': dv.getUint32(offset),
-            'pid': dv.getUint16(offset+4),
-            'avgtdis': dv.getUint16(offset+6),
-            'avgt': (dv.getUint16(offset+6) * avgtspan / maxdisnumber) + boundsavgt[0],
-            'src': dv.getUint8(offset+6+DISCRETIZE_TEMPERATURE_RESOLUTION)
+            'dm': dv.getUint16(offset),
+            'pid': dv.getUint16(offset+2),
+            'avgtdis': dv.getUint16(offset+4),
+            'avgt': (dv.getUint16(offset+4) * avgtspan / maxdisnumber) + boundsavgt[0],
+            'src': dv.getUint8(offset+4+DISCRETIZE_TEMPERATURE_RESOLUTION)
         };
-        offset += 7+DISCRETIZE_TEMPERATURE_RESOLUTION
+        offset += 5+DISCRETIZE_TEMPERATURE_RESOLUTION
 
         let currentProgress = Math.round(i / lenTemperatures * 100);
         if (currentProgress > lastReportedProgress) {
