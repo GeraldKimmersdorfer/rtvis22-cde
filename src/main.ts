@@ -34,8 +34,6 @@ const main = () => {
         ui.loadingDialogError(msg);
     });
 
-
-
 }
 
 $(function() {main()});

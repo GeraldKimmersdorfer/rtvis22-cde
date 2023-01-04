@@ -5,9 +5,9 @@
 
 filesource = "data/source/GlobalLandTemperaturesByCity.csv"
 #filesource = "data/source/GlobalLandTemperaturesByCity100k.csv"
-discretizeresolution = 1 # bytes for discretized temperature values
+discretizeresolution = 2 # bytes for discretized temperature values
 
-filedest = "dist/cdata.lzma"
+filedest = "dist/cdataBig.lzma"
 progressrefreshevery = 1000
 
 import csv

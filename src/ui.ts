@@ -16,12 +16,12 @@ export const ShowNoWebGpuWarning = () => {
 const keyDownHandler = (e:any) => {
   if (e.keyCode == 85) {  // Key: U
     // Hide/Show UI
-    let isShown = $("#dialog").dialog("isOpen");
+    let isShown = $("#mainMenu").dialog("isOpen");
     if (isShown) {
-      $( "#dialog" ).dialog("close");
+      $( "#mainMenu" ).dialog("close");
       $("#footer").fadeOut(800);
     } else {
-      $( "#dialog" ).dialog("open");
+      $( "#mainMenu" ).dialog("open");
       $("#footer").fadeIn(800);
     }
   }

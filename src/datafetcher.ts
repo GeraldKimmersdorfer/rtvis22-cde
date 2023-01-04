@@ -6,7 +6,7 @@ let bufferTime = 0.0;
 let successFunction: ((arg0:any) => void);
 let failureFunction: ((arg0:string) => void);
 
-const DISCRETIZE_TEMPERATURE_RESOLUTION = 1;
+const DISCRETIZE_TEMPERATURE_RESOLUTION = 2;
 
 const decompressData = (data: Uint8Array) => {
     bufferTime = performance.now();
@@ -60,8 +60,8 @@ const unbinData = (data: ArrayBuffer) => {
         db['temperatures'][i] = {
             'dd': dv.getUint32(offset),
             'pid': dv.getUint16(offset+4),
-            'avgtdis': dv.getUint8(offset+6),
-            'avgt': (dv.getUint8(offset+6) * avgtspan / maxdisnumber) + boundsavgt[0],
+            'avgtdis': dv.getUint16(offset+6),
+            'avgt': (dv.getUint16(offset+6) * avgtspan / maxdisnumber) + boundsavgt[0],
             'src': dv.getUint8(offset+6+DISCRETIZE_TEMPERATURE_RESOLUTION)
         };
         offset += 7+DISCRETIZE_TEMPERATURE_RESOLUTION
