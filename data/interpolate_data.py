@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 from sklearn import linear_model
 
-input_filepath = 'source/GlobalLandTemperaturesByCity.csv'
+input_filepath = r'C:/tmp/rtvis22-cde/data/source/GlobalLandTemperaturesByCity.csv'
+#row_sample = 1.0 # keeps x% of rows in output (for faster debugging)
 
 
 def fill_nans(group):
@@ -24,6 +25,7 @@ def fill_nans(group):
     predicted_temperatures = model.predict(group['dt'].dt.year.values.reshape(-1, 1))
 
     # fill NaNs with predictions
+    group['src'] = np.where(group['AverageTemperature'].isna(), 1, group['src'])
     group['AverageTemperature'] = np.where(group['AverageTemperature'].isna(), predicted_temperatures, group['AverageTemperature'])
 
     # assert no NaNs left
@@ -33,6 +35,9 @@ def fill_nans(group):
 
 
 def main():
+    #if row_sample < 1.0:
+    #    input(f"Just an information: I will delete {(1.0-row_sample)*100}% of rows by random. Press enter if you want to continue...")
+
     source_path = Path(input_filepath)
     dest_path = source_path.parent / (source_path.stem + '_interpolated.csv')
 
@@ -49,11 +54,19 @@ def main():
     df['dt'] = pd.to_datetime(df['dt'])
     print(f' {perf_counter() - start:.2f}s')
 
+    # add extra column so we know which values are interpolated:
+    df['src'] = 0
+
     # group cities by month and apply linear regression interpolation to fill NaNs
     print('Filling NaNs...', end='')
     start = perf_counter()
     df = df.groupby([df['dt'].dt.month, 'Country', 'City', 'Latitude', 'Longitude'], sort=False, group_keys=True).apply(fill_nans).reset_index(drop=True)
     print(f' {perf_counter() - start:.2f}s')
+
+    #if row_sample < 1.0:
+    #    df = df.sample(frac=row_sample)
+
+    df.sort_values(by=['City', 'dt'], inplace=True)
 
     # save to file
     print('Saving data...', end='')

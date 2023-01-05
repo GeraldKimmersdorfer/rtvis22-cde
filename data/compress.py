@@ -3,9 +3,10 @@
 # a binary compressed version for the Climatic Change Viewer it furthermore interpolates NULL and error values and
 # precalculates the coordinates in equirectangular view.
 
-filesource = "data/source/GlobalLandTemperaturesByCity.csv"
-#filesource = "data/source/GlobalLandTemperaturesByCity100k.csv"
+filesource = "data/source/GlobalLandTemperaturesByCity_interpolated.csv"
 discretizeresolution = 2 # bytes for discretized temperature values
+
+rowdropchance = 0.99 # to gain a smaller filesize for debugging, should be 0 for full dataset
 
 filedest = "src/assets/cdata.lzma"
 progressrefreshevery = 1000
@@ -18,6 +19,7 @@ import struct
 from datetime import datetime
 import lzma
 import threading
+import random
 
 def getposcode(latstr, longstr):
     return latstr + longstr
@@ -36,22 +38,25 @@ boundsavgt = [float('inf'), -float('inf')]
 with open(filesource, 'r', encoding="utf-8") as read_obj:
     # Read Header and check if correct
     header = read_obj.readline().strip()
-    if header != "dt,AverageTemperature,AverageTemperatureUncertainty,City,Country,Latitude,Longitude":
+    if header != "dt,AverageTemperature,AverageTemperatureUncertainty,City,Country,Latitude,Longitude,src":
         raise Exception("The header of the CSV-File doesn't seem to be correct!")
     csv_reader = csv.reader(read_obj) # Note: DictReader is slower!!
     progressbar = tqdm(unit=" lines", unit_scale=True, desc="Reading Input File")
     i = 0
     for row in csv_reader:
+        if random.random() < rowdropchance:
+            continue
         i += 1
         titem = {}
         titem['dt'] = datetime.strptime(row[0], "%Y-%m-%d")
         boundsdate = [min(titem['dt'], boundsdate[0]), max(titem['dt'], boundsdate[1])]
 
-        titem['src'] = 0
+        titem['src'] = int(row[7])
         try:
             titem['avgt'] = float(row[1])
             counttemp_noninterpolated += 1
         except:
+            # we should not end up here anymore because we interpolated in a previous step
             titem['avgt'] = 0.0
             titem['src'] = 1
         boundsavgt = [min(titem['avgt'], boundsavgt[0]), max(titem['avgt'], boundsavgt[1])]
@@ -114,13 +119,12 @@ print(f"With uncertainty it results into an error of max {maxerror_outofuncertai
 ##################################################################
 ################## CALCULATE PROJECTED POINTS ####################
 ##################################################################
-R = 1.0     #earth radius
-mapwidth = 1.0
-mapheight = 1.0
-for val in positionlist:
+# Note: Nope were gonna do that on the gpu to support various projections
+#R = 1.0     #earth radius
+#mapwidth = 1.0
+#mapheight = 1.0
+for val in positionlist: 
     val['y'], val['x'] = tolatlongfloat(val['lat'], val['long'])
-
-#ToDo: Interpolate all temp where src = 1
 
 
 
