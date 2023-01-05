@@ -1,7 +1,6 @@
 # This script takes the GlobalLandTemperaturesByCity.csv file from the dataset
 # https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data and creates
-# a binary compressed version for the Climatic Change Viewer it furthermore interpolates NULL and error values and
-# precalculates the coordinates in equirectangular view.
+# a binary compressed version for the Climatic Change Viewer
 
 filesource = "data/source/GlobalLandTemperaturesByCity_interpolated.csv"
 discretizeresolution = 2 # bytes for discretized temperature values

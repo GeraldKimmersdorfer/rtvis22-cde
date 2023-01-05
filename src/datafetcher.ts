@@ -22,7 +22,6 @@ const decompressData = (data: Uint8Array) => {
             }
         });
 }
-// NOTE: CHECK WHETER dMONTHS is enough
 const unbinData = (data: ArrayBuffer) => {
     bufferTime = performance.now();
     ui.loadingDialogProgress(0);
