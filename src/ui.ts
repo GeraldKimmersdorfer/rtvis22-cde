@@ -53,9 +53,8 @@ export const InitUserInterface = () => {
     value: false
   });
   $( "#mainMenu" ).dialog({
-      position: { my: "left top", at: "left+10 top+10", of: window },
+      position: { my: "left top", at: "left+0 top+0", of: window },
       dialogClass: "no-close",
-      autoOpen: false,
       show: {
         effect: "drop",
         duration: 800
@@ -126,5 +125,6 @@ export const loadingDialogSuccess = (msg:string) => {
   $("#lblLoading").html(msg);
   $("#spLoading").removeClass("animated").html("done_all");
   $( "#pbLoading" ).progressbar( "option", {value: 0, disabled: true});
+  $("body").removeClass("loading").addClass("map");
   setTimeout(()=> {$("#loadingDialog").dialog( "close" )}, 800);
 }

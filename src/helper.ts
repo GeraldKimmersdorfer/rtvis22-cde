@@ -28,14 +28,14 @@ export const CreateGPUBufferUint = (device:GPUDevice, data:Uint32Array,
   return buffer;
 }
 
-export const CreateGPUBuffer = (device:GPUDevice, data:Float32Array, 
+export const CreateGPUBuffer = (device:GPUDevice, data:ArrayBuffer, 
   usageFlag:GPUBufferUsageFlags = GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST) => {
   const buffer = device.createBuffer({
       size: data.byteLength,
       usage: usageFlag,
       mappedAtCreation: true
   });
-  new Float32Array(buffer.getMappedRange()).set(data);
+  new Uint8Array(buffer.getMappedRange()).set(new Uint8Array(data));
   buffer.unmap();
   return buffer;
 }

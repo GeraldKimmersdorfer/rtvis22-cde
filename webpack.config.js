@@ -36,7 +36,7 @@ module.exports = {
                 loader: 'ts-shader-loader'
             },
             {
-                test: /\.(png|lzma|woff2)$/i,
+                test: /\.(png|lzma|woff2|jpg)$/i,
                 type: 'asset/resource'
             }
         ]

@@ -26,9 +26,9 @@ const main = () => {
         ui.loadingDialogSuccess("We're all set and ready");
         ui.showMainMenu();
         ui.showCanvas();
-        RenderTriangle();
+        RenderTriangle(db);
         window.addEventListener('resize', function(){
-            RenderTriangle();
+            RenderTriangle(db);
         });
     }, function on_failure(msg:string) {
         ui.loadingDialogError(msg);

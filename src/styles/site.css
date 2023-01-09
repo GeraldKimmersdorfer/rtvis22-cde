@@ -53,14 +53,22 @@ html {
 }
 
   #footer {
-    position:absolute;
-    width:100%;
+    position: absolute;
+    width: 100%;
     background: rgba(0.0, 0.0, 0.0, 0.8);
     bottom: 0;
     padding: 8px 15px 10px 15px;
     font-size:small;
     color: white;
     box-sizing: border-box;
+  }
+
+  body.map {
+    background-image: url(../assets/equi_back_v3.png), linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+    height: 50vh;
+    background-color: #697b85;
+    background-size: 100% 100%, 10px 10px;
+    animation: progress-bar-stripes-map 3s linear infinite;
   }
 
   body.error {
@@ -79,6 +87,15 @@ html {
     animation: progress-bar-stripes 1s linear infinite;
   }
   
+  @keyframes progress-bar-stripes-map {
+    0% {
+      background-position: 0 0, 20px 0;
+    }
+    100% {
+      background-position: 0 0, 0 0;
+    }
+}
+
   @keyframes progress-bar-stripes {
     0% {
       background-position: 20px 0;

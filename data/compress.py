@@ -5,7 +5,7 @@
 filesource = "data/source/GlobalLandTemperaturesByCity_interpolated.csv"
 discretizeresolution = 2 # bytes for discretized temperature values
 
-rowdropchance = 0.99 # to gain a smaller filesize for debugging, should be 0 for full dataset
+rowdropchance = 0.9 # to gain a smaller filesize for debugging, should be 0 for full dataset
 
 filedest = "src/assets/cdata.lzma"
 progressrefreshevery = 1000

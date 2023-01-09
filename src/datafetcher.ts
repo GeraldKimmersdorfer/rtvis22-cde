@@ -46,8 +46,13 @@ const unbinData = (data: ArrayBuffer) => {
     let offset = 23;
     for (let i = 0; i < lenPositions; i++) {
         db['positions'][i] = {
-            'x': dv.getFloat32(offset, false),
-            'y': dv.getFloat32(offset+4, false)
+            // TODO: (Note) lat and long is switched!!!
+            'lat': dv.getFloat32(offset+4, false),
+            'lon': dv.getFloat32(offset, false),
+            'x': 0.0,
+            'y': 0.0,
+            'id_min': 0,
+            'id_max': 0
         };
         offset += 8
     }
@@ -59,7 +64,7 @@ const unbinData = (data: ArrayBuffer) => {
         db['temperatures'][i] = {
             'dm': dv.getUint16(offset),
             'pid': dv.getUint16(offset+2),
-            'avgtdis': dv.getUint16(offset+4),
+            //'avgtdis': dv.getUint16(offset+4),
             'avgt': (dv.getUint16(offset+4) * avgtspan / maxdisnumber) + boundsavgt[0],
             'src': dv.getUint8(offset+4+DISCRETIZE_TEMPERATURE_RESOLUTION)
         };
@@ -73,6 +78,22 @@ const unbinData = (data: ArrayBuffer) => {
     }
     let speed = formatMilliseconds(performance.now() - bufferTime);
     ui.loadingDialogAddHistory(`Read ${(db.temperatures.length/1000000).toFixed(2)}M entries @ ${db.positions.length} locations [${speed}]`);
+    
+    // ToDo: Already change database file layout into the following:
+    // temperaturelist is sorted by pid! (and secondly by dm)
+    // pid then can be removed from temperaturelist, but 
+    // positionlist: every entry gets minIndex and maxIndex as int property!
+    db.temperatures = db.temperatures.sort((a,b) => { return a['pid'] < b['pid'] ? -1 : 1; });
+    db.positions[db.temperatures[0].pid]['id_min'] = 0;
+    for (var i = 1; i < db.temperatures.length; i++) {
+        if (db.temperatures[i-1].pid != db.temperatures[i].pid) {
+            db.positions[db.temperatures[i-1].pid]['id_max'] = i-1;
+            db.positions[db.temperatures[i].pid]['id_min'] = i;
+        }
+
+    }
+    db.positions[db.temperatures[i-1].pid]['id_max'] = i-1
+
     successFunction(db);
 }
 
