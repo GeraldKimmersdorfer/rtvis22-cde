@@ -6,6 +6,7 @@ import { CreateEmptyGPUBuffer, CreateFilledGPUBuffer } from './helper'
 import { GridBuffer, UniformBuffer } from './rendering/buffer';
 import { DB } from './db';
 import { TH } from './ui';
+import * as ui from './ui'
 
 
 var _canvas:HTMLCanvasElement;
@@ -260,6 +261,7 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
         TH.pushTime("wback", Date.now() - start);
         const copyArrayBuffer:ArrayBuffer = _gridReadBuffer.getMappedRange();
         gridBuffer.from_buffer(copyArrayBuffer);
+        ui.refreshGraphInformation(gridBuffer);
     }
 
 }

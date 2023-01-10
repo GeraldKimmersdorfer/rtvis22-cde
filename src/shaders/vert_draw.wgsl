@@ -14,9 +14,9 @@ struct Uniforms {
 
     gridAspect: u32,                // 1 if grid should respect viewport aspect ratio
     colorMode: u32,                 // 0...sequential, 1...diverging
-    colorA: vec4<f32>,              // color for max values
+    colorA: vec4<f32>,              // color for min values
     colorB: vec4<f32>,              // color for 0 (if diverging)
-    colorC: vec4<f32>,              // color for min values
+    colorC: vec4<f32>,              // color for max values
     colorNull: vec4<f32>,            // color for empty cell
 
     hoverIndex: i32                 // contains the id of the active grid cell
@@ -68,13 +68,13 @@ fn color_from_val(val: f32) -> vec4<f32>
 {
     if (uniforms.colorMode == 0) {   // sequential
         let p:f32 = (val - minmaxvalues.r) / minmaxvalues.b;
-        return mix(uniforms.colorC, uniforms.colorA, p);
+        return mix(uniforms.colorA, uniforms.colorC, p);
     } else {    // diverging
-        if (val < 0) {
-            let p:f32 = abs(val) / abs(minmaxvalues.r);
+        if (val > 0) {
+            let p:f32 = val / minmaxvalues.g;
             return mix(uniforms.colorB, uniforms.colorC, p);
         } else {
-            let p:f32 = val / minmaxvalues.g;
+            let p:f32 = abs(val) / abs(minmaxvalues.r);
             return mix(uniforms.colorB, uniforms.colorA, p);
         }
     } 
@@ -109,10 +109,10 @@ fn vs_main(
         output.vColor = uniforms.colorNull;
     }
     if (uniforms.hoverIndex > 0) {
-        output.vColor.a *= 0.5;
+        output.vColor.a *= 0.8;
     }
     if (uniforms.hoverIndex == i32(instanceIndex)) {
-        output.vColor.a = output.vColor.a * 2.0 + 0.1;        
+        output.vColor.a = output.vColor.a * 1.5 + 0.1;        
     }
     
     return output;

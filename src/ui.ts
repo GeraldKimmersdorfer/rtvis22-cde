@@ -4,6 +4,7 @@ import { DB } from "./db";
 import { getMonthDifference } from "./helper";
 
 import * as renderer from './renderer';
+import { GridBuffer } from "./rendering/buffer";
 
 require('jquery-ui/ui/widgets/dialog');
 require('jquery-ui/ui/widgets/progressbar');
@@ -176,7 +177,7 @@ export const InitUserInterface = () => {
     $("#s-compare").selectmenu({
       change: function( event: any, data: any ) {
         renderer.uniformBuffer.monthComparison_i32 = +data.item.value;
-        renderer.renderFrame();
+        renderer.renderFrame(false, false, false, true);
       }
     });
     $("#s-colormode").selectmenu({
@@ -237,14 +238,25 @@ export const InitUserInterface = () => {
     $("#canvas-webgpu").mousemove((e:any) => {
       clearTimeout(delayTimer);
       delayTimer = setTimeout(() => {
-        renderer.uniformBuffer.determine_hover_cell(e.clientX, e.clientY);
+        let hc = renderer.uniformBuffer.determine_hover_cell(e.clientX, e.clientY);
         renderer.renderFrame(false, false, true);
+        if (hc.i > 0) {
+          $("#cinfo-group").show(200);
+          let gridData = renderer.gridBuffer.data[renderer.uniformBuffer.hoverIndex_i32];
+          $("#lbl-curval").html(gridData.value.toFixed(5) + " °C");
+          $("#lbl-curn").html(gridData.valueN.toFixed(0));
+          $("#lbl-curcoord").html(hc.col.toFixed(0) + " | " + hc.row.toFixed(0) + " (" + hc.i + ")");
+          
+        }
+
+        
       }, 5);
       
     }).mouseleave(() => {
       setTimeout(() => {
         renderer.uniformBuffer.hoverIndex_i32 = -1;
         renderer.renderFrame(false, false, true);
+        $("#cinfo-group").hide(200);
       }, 5);
     });
 }
@@ -258,6 +270,14 @@ export const initWithData = () => {
     min: DB.bounds_date.min.getFullYear(),
     max: DB.bounds_date.max.getFullYear()
   });
+}
+
+export const refreshGraphInformation = (buff:GridBuffer) => {
+  let info = buff.get_stats();
+  $("#lbl-aggrmax").html(info.max.toFixed(5) + " °C");
+  $("#lbl-aggrmin").html(info.min.toFixed(5) + " °C");
+  $("#lbl-aggravg").html(info.avg.toFixed(5) + " °C");
+  $("#lbl-aggrn").html(info.n_total.toString());
 }
 
 export const showFooter = () => {

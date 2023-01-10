@@ -76,7 +76,8 @@ export class UniformBuffer {
         };
     }
 
-    determine_hover_cell(scrx: number, scry: number) {
+    // Note: This function is just an approximation that works on a unified grid (and not a hexagonal one)... But its good enough.
+    determine_hover_cell(scrx: number, scry: number):{col:number, row:number, i:number} {
         var x = scrx / this.screenSize.x_u32;
         var y = 1.0 - (scry / this.screenSize.y_u32);
         
@@ -88,6 +89,7 @@ export class UniformBuffer {
         var q = Math.floor(q);
         
         this.hoverIndex_i32 = r * this.gridResolution.x_u32 + q;
+        return {col: q, row: r, i:this.hoverIndex_i32};
     }
 
     set_screensize(width: number, height: number) {
@@ -165,6 +167,19 @@ export class GridBuffer {
                 valueN: dvGridReadBuffer.getUint32(i*16+12, true)
             });
         }
+    }
+
+    get_stats():{max:number, min:number, avg:number, n_total:number} {
+        var ret = {max: this.data[0].value, min: this.data[0].value, avg: this.data[0].value, n_total: this.data[0].valueN};
+        for (var i = 1; i < this.data.length; i++) {
+            let val = this.data[i].value;
+            if (val > ret.max) ret.max = val;
+            if (val < ret.min) ret.min = val;
+            ret.avg += val;
+            ret.n_total += this.data[i].valueN;
+        }
+        ret.avg /= this.data.length;
+        return ret;
     }
 
 }
