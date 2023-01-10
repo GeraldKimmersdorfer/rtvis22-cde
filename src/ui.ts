@@ -1,4 +1,3 @@
-import { AnyMxRecord } from "dns";
 import $ from "jquery";
 import { DB } from "./db";
 import { getMonthDifference } from "./helper";
@@ -61,7 +60,7 @@ const keyDownHandler = (e:any) => {
     } else {
       showMainMenu();
       showFooter();
-      showFooter();
+      showInfoMenu();
     }
   }
 }
@@ -246,18 +245,15 @@ export const InitUserInterface = () => {
           $("#lbl-curval").html(gridData.value.toFixed(5) + " °C");
           $("#lbl-curn").html(gridData.valueN.toFixed(0));
           $("#lbl-curcoord").html(hc.col.toFixed(0) + " | " + hc.row.toFixed(0) + " (" + hc.i + ")");
-          
         }
-
-        
-      }, 5);
+      }, 1);
       
     }).mouseleave(() => {
       setTimeout(() => {
         renderer.uniformBuffer.hoverIndex_i32 = -1;
         renderer.renderFrame(false, false, true);
         $("#cinfo-group").hide(200);
-      }, 5);
+      }, 1);
     });
 }
 

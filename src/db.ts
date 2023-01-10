@@ -32,8 +32,6 @@ let _bufferTime = 0.0;
 let _successFunction: ((arg0:Database) => void);
 let _failureFunction: ((arg0:string) => void);
 
-const DISCRETIZE_TEMPERATURE_RESOLUTION = 2;
-
 
 export const fetchAndUnpackData = (on_finish:(data:Database)=>void, on_failure:(msg:string)=>void) => {
     _successFunction = on_finish;
@@ -85,23 +83,31 @@ const decompressData = (data: Uint8Array) => {
         });
 }
 
+const dvgetUintFcPtr:any = {
+    1: DataView.prototype.getUint8,
+    2: DataView.prototype.getUint16,
+    4: DataView.prototype.getUint32
+};
+
 const unbinData = (data: ArrayBuffer) => {
     _bufferTime = performance.now();
     ui.loadingDialogProgress(0);
     ui.loadingDialogLabel("Unbinning of binary data");
     let dv = new DataView(data);
+
+    let discretizeresolution = dv.getUint8(0);
     let bounds_date = {
-        min: new Date(dv.getUint16(0, false), dv.getUint8(2), dv.getUint8(3)),
-        max: new Date(dv.getUint16(4, false), dv.getUint8(6), dv.getUint8(7))
+        min: new Date(dv.getUint16(1, false), dv.getUint8(3), dv.getUint8(4)),
+        max: new Date(dv.getUint16(5, false), dv.getUint8(7), dv.getUint8(8))
     };
     let bounds_avgt = {
-        min: dv.getFloat32(8, false),
-        max: dv.getFloat32(12, false)
+        min: dv.getFloat32(9, false),
+        max: dv.getFloat32(13, false)
     };
 
-    let lenTemperatures = dv.getUint32(16);
-    let lenPositions = dv.getUint16(20);
-    let lenCountries = dv.getUint8(22);
+    let lenTemperatures = dv.getUint32(17);
+    let lenPositions = dv.getUint16(21);
+    let lenCountries = dv.getUint8(23);
     // Read position LUT
     let db = {
         'bounds_date': bounds_date,
@@ -109,32 +115,30 @@ const unbinData = (data: ArrayBuffer) => {
       'positions': new Array(lenPositions),
       'temperatures': new Array(lenTemperatures)
     };
-    let offset = 23;
+    let offset = 24;
     for (let i = 0; i < lenPositions; i++) {
         db['positions'][i] = {
-            // TODO: (Note) lat and long is switched!!!
-            'lat': dv.getFloat32(offset+4, false),
-            'lon': dv.getFloat32(offset, false),
+            'lat': dv.getFloat32(offset, false),
+            'lon': dv.getFloat32(offset+4, false),
             'x': 0.0,
             'y': 0.0,
-            'id_min': 0,
-            'id_max': 0
+            'id_min': dv.getUint32(offset+8, false),
+            'id_max': dv.getUint32(offset+12, false)
         };
-        offset += 8
+        offset += 16;
     }
     // Read temperature db
     let avgtspan = bounds_avgt.max - bounds_avgt.min;
-    let maxdisnumber = 2**(DISCRETIZE_TEMPERATURE_RESOLUTION*8)-1;
+    let maxdisnumber = 2**(discretizeresolution*8)-1;
     let lastReportedProgress = -1;
     for (let i = 0; i < lenTemperatures; i++) {
+        let packed_dm:number = dv.getUint16(offset);
         db['temperatures'][i] = {
-            'dm': dv.getUint16(offset),
-            'pid': dv.getUint16(offset+2),
-            //'avgtdis': dv.getUint16(offset+4),
-            'avgt': (dv.getUint16(offset+4) * avgtspan / maxdisnumber) + bounds_avgt.min,
-            'src': dv.getUint8(offset+4+DISCRETIZE_TEMPERATURE_RESOLUTION)
+            'dm': packed_dm >>> 2,
+            'avgt': (dvgetUintFcPtr[discretizeresolution].bind(dv)(offset+2) * avgtspan / maxdisnumber) + bounds_avgt.min,
+            'src': packed_dm & 3
         };
-        offset += 5+DISCRETIZE_TEMPERATURE_RESOLUTION
+        offset += 2+discretizeresolution
 
         let currentProgress = Math.round(i / lenTemperatures * 100);
         if (currentProgress > lastReportedProgress) {
@@ -144,21 +148,6 @@ const unbinData = (data: ArrayBuffer) => {
     }
     let speed = formatMilliseconds(performance.now() - _bufferTime);
     ui.loadingDialogAddHistory(`Read ${(db.temperatures.length/1000000).toFixed(2)}M entries @ ${db.positions.length} locations [${speed}]`);
-    
-    // ToDo: Already change database file layout into the following:
-    // temperaturelist is sorted by pid! (and secondly by dm)
-    // pid then can be removed from temperaturelist, but 
-    // positionlist: every entry gets minIndex and maxIndex as int property!
-    db.temperatures = db.temperatures.sort((a,b) => { return a['pid'] < b['pid'] ? -1 : 1; });
-    db.positions[db.temperatures[0].pid]['id_min'] = 0;
-    for (var i = 1; i < db.temperatures.length; i++) {
-        if (db.temperatures[i-1].pid != db.temperatures[i].pid) {
-            db.positions[db.temperatures[i-1].pid]['id_max'] = i-1;
-            db.positions[db.temperatures[i].pid]['id_min'] = i;
-        }
-
-    }
-    db.positions[db.temperatures[i-1].pid]['id_max'] = i-1
 
     DB = db;
     _successFunction(DB);

@@ -3,6 +3,7 @@
 # a binary compressed version for the Climatic Change Viewer
 
 filesource = "data/source/GlobalLandTemperaturesByCity_interpolated.csv"
+#filesource = "data/source/GlobalLandTemperaturesByCity_interpolated_small.csv"
 discretizeresolution = 2 # bytes for discretized temperature values
 
 rowdropchance = 0.9 # to gain a smaller filesize for debugging, should be 0 for full dataset
@@ -72,7 +73,7 @@ with open(filesource, 'r', encoding="utf-8") as read_obj:
             # add new positionslist entry
             positionlist.append({
                 'lat': row[5],
-                'long': row[6],
+                'lon': row[6],
                 'city': row[3]
             })
             positionmap[poscode] = len(positionlist) - 1
@@ -119,13 +120,41 @@ print(f"With uncertainty it results into an error of max {maxerror_outofuncertai
 ################## CALCULATE PROJECTED POINTS ####################
 ##################################################################
 # Note: Nope were gonna do that on the gpu to support various projections
-#R = 1.0     #earth radius
-#mapwidth = 1.0
-#mapheight = 1.0
 for val in positionlist: 
-    val['y'], val['x'] = tolatlongfloat(val['lat'], val['long'])
+    val['lat'], val['lon'] = tolatlongfloat(val['lat'], val['lon'])
 
+##################################################################
+################## REORGANIZE DATA ###############################
+##################################################################
+# We want to save the temp data without pid. So we have to sort templist by pid
+# and then save start- and endindices inside poslist
 
+progressbar = tqdm(total=len(temperaturelist), unit=" lines", unit_scale=True, desc="Calculating month-difference values")
+for i, itm in enumerate(temperaturelist):
+    delta_months = (itm['dt'].year - boundsdate[0].year) * 12 + (itm['dt'].month - boundsdate[0].month)
+    itm['dm'] = delta_months
+    if not i % progressrefreshevery:
+        progressbar.update(progressrefreshevery)
+
+progressbar.close()
+
+print(f"Resorting temperature table...")
+temperaturelist.sort(key = lambda x: x['dt'], reverse=False) # secondly by dm
+temperaturelist.sort(key = lambda x: x['pid'], reverse=False) # and first by pid
+
+positionlist[temperaturelist[0]['pid']]['id_min'] = 0
+progressbar = tqdm(total=len(temperaturelist), unit=" lines", unit_scale=True, desc="Evaluating Position Indices")
+for i in range(1, len(temperaturelist)):
+    if (temperaturelist[i-1]['pid'] != temperaturelist[i]['pid']):
+        positionlist[temperaturelist[i-1]['pid']]['id_max'] = i - 1
+        positionlist[temperaturelist[i]['pid']]['id_min'] = i
+    
+    if not i % progressrefreshevery:
+        progressbar.update(progressrefreshevery)
+
+progressbar.update(progressrefreshevery)
+progressbar.close()
+positionlist[temperaturelist[len(temperaturelist) - 1]['pid']]['id_max'] = len(temperaturelist) - 1
 
 #print(f"{counttemp} entries. {mindate} min. {maxdate} max. {len(countrylist)} countries, {len(positionmap)} positions", flush=True)
 
@@ -134,6 +163,8 @@ for val in positionlist:
 #########################################################
 
 bdata = bytearray()
+
+bdata.extend(discretizeresolution.to_bytes(1, "big", signed=False))        # 1 byte
 
 bdata.extend(boundsdate[0].year.to_bytes(2, "big", signed=False))          # 2 byte
 bdata.extend(boundsdate[0].month.to_bytes(1, "big", signed=False))         # 1 byte
@@ -152,17 +183,16 @@ bdata.extend((len(countrylist)).to_bytes(1, "big", signed=False))    # 1 byte
 # now lets write the position lut (index is derived
 # by position in file (we don't need to save that)
 for val in positionlist:                                                 # len(positionmap) *
-    bdata.extend(struct.pack(">f", val['x']))               # 4 byte
-    bdata.extend(struct.pack(">f", val['y']))               # 4 byte
+    bdata.extend(struct.pack(">f", val['lat']))               # 4 byte
+    bdata.extend(struct.pack(">f", val['lon']))               # 4 byte
+    bdata.extend(val['id_min'].to_bytes(4, "big", signed=False))
+    bdata.extend(val['id_max'].to_bytes(4, "big", signed=False))
 
 progressbar = tqdm(total=len(temperaturelist), unit=" lines", unit_scale=True, desc="Writing temperature data")
 for i, itm in enumerate(temperaturelist):
-    delta_months = (itm['dt'].year - boundsdate[0].year) * 12 + (itm['dt'].month - boundsdate[0].month)
-    bdata.extend(delta_months.to_bytes(2, "big", signed=False))            # 2 byte
-    bdata.extend(itm['pid'].to_bytes(2, "big", signed=False))             # 2 byte
-    #bdata.extend(struct.pack(">f", itm['avgt']))                            # 4 byte
+    packed_dm = (itm['dm'] << 2) | (itm['src'] & 3)                            # last two bits for src (just one needed but whatever)
+    bdata.extend(packed_dm.to_bytes(2, "big", signed=False))            # 2 byte
     bdata.extend(itm['avgtdis'].to_bytes(discretizeresolution, "big", signed=False))
-    bdata.extend(itm['src'].to_bytes(1, "big", signed=False))               # 1 byte
 
     if not i % progressrefreshevery:
         progressbar.update(progressrefreshevery)
