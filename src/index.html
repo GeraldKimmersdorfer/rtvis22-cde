@@ -103,8 +103,35 @@
 
     </div>
 
-    <div id="infoMenu" title="Info" style="display:none;">
-        asdasd
+    <div id="infoMenu" title="Information" style="display:none;">
+        <div id="infoMenuAccordion">
+            <h3>Graph</h3>
+            <div>
+                <p>
+                    Maximum: <span id="lbl-aggrmax" class="time-range">4.2312°C</span><br />
+                    Minimum: <span id="lbl-aggrmin" class="time-range">-1.2341°C</span><br />
+                    Average: <span id="lbl-aggravg" class="time-range">2.4312°C</span><br />
+                </p>
+                <hr>
+                <p>
+                    Coordinates: <span id="lbl-curcoord" class="time-range">4 | 2</span><br />
+                    Value: <span id="lbl-curval" class="time-range">4 ms (Ø 4.5)</span><br />
+                    N: <span id="lbl-curn" class="time-range">234</span><br />
+                </p>
+            </div>
+
+            <h3>Compute Time</h3>
+            <div>
+                <p>
+                    Aggregate: <span id="lbl-aggtime" class="time-range">4 ms (Ø 4.5)</span><br />
+                    Averaging: <span id="lbl-avgtime" class="time-range">4 ms (Ø 4.5)</span><br />
+                    Rendering: <span id="lbl-rendtime" class="time-range">4 ms (Ø 4.5)</span><br />
+                    WriteBack: <span id="lbl-wbacktime" class="time-range">0 ms (Ø 0.0)</span>
+                </p>
+            </div>
+
+
+        </div>
     </div>
 
     <canvas id="canvas-webgpu" style="display:none;"></canvas>

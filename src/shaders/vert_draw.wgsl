@@ -98,7 +98,7 @@ fn vs_main(
         size_transformed.x /= aspect;
     }
     if (uniforms.hoverIndex == i32(instanceIndex)) {
-        size_transformed *= (1.0 + uniforms.gridProperties.w * 2.0);
+        size_transformed *= (1.0 + uniforms.gridProperties.w * 1.5);
     }
     output.Position = vec4<f32>(pos_transformed + positions[vertexIndex] * size_transformed, 0f, 1f);
 

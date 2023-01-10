@@ -26,7 +26,7 @@ const main = () => {
         //console.log(db);
         ui.initWithData();
         renderer.init().then(() => {
-            renderer.renderFrame().then(() => {
+            renderer.renderFrame(false,false,false,true).then(() => {
                 ui.loadingDialogSuccess("We're all set and ready");
                 ui.showMainMenu();
                 ui.showCanvas();

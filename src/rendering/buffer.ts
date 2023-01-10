@@ -138,3 +138,33 @@ export class UniformBuffer {
 
 
 }
+
+interface GridEntry {
+    mPoint: {x:number, y:number},
+    value: number,
+    valueN: number
+}
+
+export class GridBuffer {
+
+    data:GridEntry[] = [];
+    
+    constructor() {
+    }
+
+    from_buffer(buff:ArrayBuffer) {
+        const dvGridReadBuffer:DataView = new DataView(buff);
+        this.data = [];
+        for (var i = 0; i < buff.byteLength / 4 / 4; i++) {
+            this.data.push({
+                mPoint: { 
+                    x: dvGridReadBuffer.getFloat32(i*16, true),
+                    y: dvGridReadBuffer.getFloat32(i*16+4, true)
+                },
+                value: dvGridReadBuffer.getFloat32(i*16+8, true),
+                valueN: dvGridReadBuffer.getUint32(i*16+12, true)
+            });
+        }
+    }
+
+}

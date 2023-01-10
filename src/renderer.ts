@@ -3,8 +3,9 @@ import frag_draw_shader from './shaders/frag_draw.wgsl';
 import comp_aggregate_shader from './shaders/comp_aggregate.wgsl';
 import comp_average_shader from './shaders/comp_average.wgsl'
 import { CreateEmptyGPUBuffer, CreateFilledGPUBuffer } from './helper'
-import { UniformBuffer } from './rendering/buffer';
+import { GridBuffer, UniformBuffer } from './rendering/buffer';
 import { DB } from './db';
+import { TH } from './ui';
 
 
 var _canvas:HTMLCanvasElement;
@@ -30,6 +31,7 @@ var _averageBindGroup:GPUBindGroup;
 var _initialised:boolean = false;
 
 export var uniformBuffer:UniformBuffer = new UniformBuffer();
+export var gridBuffer:GridBuffer = new GridBuffer();
 
 export const init = async () => {
     _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
@@ -181,7 +183,7 @@ const createBindGroups = () => {
 	});
 }
 
-export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePositionBuffer:boolean = false, onlyDrawStage:boolean = false) => {
+export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePositionBuffer:boolean = false, onlyDrawStage:boolean = false, readBackGridBuffer:boolean = false) => {
     if (!_initialised) return;
 
     if (recreateGridBuffer) {
@@ -193,9 +195,6 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
     if (recreateGridBuffer || recreatePositionBuffer) {
         createBindGroups();
     }
-
-    // Create readback buffer:
-    createGridReadBuffer();
 
     // Update uniform buffer:
     _device.queue.writeBuffer(_uniformBuffer, 0, uniformBuffer.get_buffer());
@@ -213,7 +212,7 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
         var start = Date.now();
         _device.queue.submit([commandEncoder.finish()]);
         await _device.queue.onSubmittedWorkDone();
-        console.log(`Aggregation finished after ${Date.now() - start} ms`);
+        TH.pushTime("agg", Date.now() - start);
     
         commandEncoder = _device.createCommandEncoder();
         const avgPass = commandEncoder.beginComputePass();
@@ -225,7 +224,7 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
         start = Date.now();
         _device.queue.submit([commandEncoder.finish()]);
         await _device.queue.onSubmittedWorkDone();
-        console.log(`Averaging finished after ${Date.now() - start} ms`);
+        TH.pushTime("avg", Date.now() - start);
     }
     
     commandEncoder = _device.createCommandEncoder();
@@ -246,36 +245,22 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
     start = Date.now();
     _device.queue.submit([commandEncoder.finish()]);
     await _device.queue.onSubmittedWorkDone();
-    console.log(`Rendering finished after ${Date.now() - start} ms`);
+    TH.pushTime("rend", Date.now() - start);
 
-    /*
-    commandEncoder = _device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(_gridBuffer, 0, _gridReadBuffer, 0, _gridReadBuffer.size);
-    _device.queue.submit([commandEncoder.finish()]);
-    await _gridReadBuffer.mapAsync(GPUMapMode.READ);
-    const copyArrayBuffer:ArrayBuffer = _gridReadBuffer.getMappedRange();
-    const dvGridReadBuffer:DataView = new DataView(copyArrayBuffer);
-    console.log(copyArrayBuffer);
-    var gridData = new Array(uniformBuffer.gridResolution.x_u32).fill(false).map(() => new Array(uniformBuffer.gridResolution.y_u32).fill(false));
-    console.log(gridData);
-    for (var i = 0; i < copyArrayBuffer.byteLength / 4 / 4; i++) {
-        let col = i % uniformBuffer.gridResolution.x_u32;
-        let row = Math.floor(i / uniformBuffer.gridResolution.x_u32);
-        gridData[col][row] = {
-            mPoint: { 
-                x: dvGridReadBuffer.getFloat32(i*16, true),
-                y: dvGridReadBuffer.getFloat32(i*16+4, true)
-            },
-            value: dvGridReadBuffer.getFloat32(i*16+8, true),
-            valueN: dvGridReadBuffer.getUint32(i*16+12, true)
-        };
+    
+    if (readBackGridBuffer || recreateGridBuffer) {
+        // Create readback buffer:
+        createGridReadBuffer();
+
+        commandEncoder = _device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(_gridBuffer, 0, _gridReadBuffer, 0, _gridReadBuffer.size);
+        _device.queue.submit([commandEncoder.finish()]);
+        start = Date.now();
+        await _gridReadBuffer.mapAsync(GPUMapMode.READ);
+        TH.pushTime("wback", Date.now() - start);
+        const copyArrayBuffer:ArrayBuffer = _gridReadBuffer.getMappedRange();
+        gridBuffer.from_buffer(copyArrayBuffer);
     }
-    console.log(gridData);*/
 
 }
 
-interface GridEntry {
-    mPoint: {x:number, y:number},
-    value: number,
-    valueN: number
-}

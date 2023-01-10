@@ -12,7 +12,9 @@ html {
 }
 
 p {
+  margin-block-start: 0.5em;
   margin-block-end: 0.5em;
+  line-height: 180%;
 }
 
  body {
@@ -56,12 +58,13 @@ p {
   }
 }
 
-#mainMenu {
+#mainMenu,#infoMenu {
   padding: 0;
 }
 
-#mainMenu .ui-accordion-content {
+.ui-accordion-content.ui-widget-content {
   padding: 1em;
+  background: rgba(255, 255, 255, 0.05);
 }
 
   #footer {
