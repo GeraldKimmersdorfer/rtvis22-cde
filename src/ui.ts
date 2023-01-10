@@ -21,6 +21,33 @@ export const ShowNoWebGpuWarning = () => {
     $("#nowebgpu").position({ my: "center center", at: "center center", of: window }).fadeIn(800);
 }
 
+class ComputeTimeHolder {
+
+  frameTimes:{[id: string] : {
+    name:string,
+    vals:number[]
+  }} = {};
+
+  constructor() {
+      this.frameTimes = {
+        agg: { name: "Aggregate", vals: []},
+        avg: { name: "Averaging", vals: []},
+        rend: { name: "Rendering", vals: []},
+        wback: { name: "WriteBack", vals: []}
+      }
+  }
+
+  pushTime(id:string, time:number) {
+    if (this.frameTimes[id].vals.push(time) > 60) {
+      this.frameTimes[id].vals.shift();
+    }
+    let avg = this.frameTimes[id].vals.reduce((a,b) => a + b, 0) / this.frameTimes[id].vals.length;
+    $("#lbl-" + id + "time").html(time.toString() + " ms (Ø " + avg.toFixed(2) + ")");
+  }
+}
+
+export const TH:ComputeTimeHolder = new ComputeTimeHolder();
+
 // Internal function to handle keydown events.
 const keyDownHandler = (e:any) => {
   if (e.keyCode == 85) {  // Key: U
@@ -101,7 +128,7 @@ export const InitUserInterface = () => {
         $( "#lbl-tra" ).html(ui.values[ 0 ] + " - " + ui.values[ 1 ] );
       }
     }).on("slidestop", (e:any, ui:any) => {
-      renderer.renderFrame();
+      renderer.renderFrame(false, false, false, true);
     });
     $( "#s-trb" ).slider({
       range: true,
@@ -120,7 +147,7 @@ export const InitUserInterface = () => {
       }
     }).on("slidestop", (e:any, ui:any) => {
       console.log(renderer.uniformBuffer.timeRangeBounds);
-      renderer.renderFrame();
+      renderer.renderFrame(false, false, false, true);
     });
 
     $( "#s-gscale" ).slider({
@@ -201,23 +228,24 @@ export const InitUserInterface = () => {
       renderer.uniformBuffer.set_respect_aspect($(event.target).is(":checked"));
       renderer.renderFrame(true);
     });
-    $("#mainMenuAccordion").accordion({
+    $("#mainMenuAccordion,#infoMenuAccordion").accordion({
       heightStyle: "content",
       collapsible: true
     });
+
     var delayTimer:any;
     $("#canvas-webgpu").mousemove((e:any) => {
       clearTimeout(delayTimer);
       delayTimer = setTimeout(() => {
         renderer.uniformBuffer.determine_hover_cell(e.clientX, e.clientY);
         renderer.renderFrame(false, false, true);
-      }, 10);
+      }, 5);
       
     }).mouseleave(() => {
       setTimeout(() => {
         renderer.uniformBuffer.hoverIndex_i32 = -1;
         renderer.renderFrame(false, false, true);
-      }, 10);
+      }, 5);
     });
 }
 
