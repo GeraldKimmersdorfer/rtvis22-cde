@@ -7,6 +7,7 @@ import $ from "jquery";
 import * as renderer from './renderer';
 import { Database, fetchAndUnpackData } from './db';
 
+
 // Entry-Point of Application
 const main = () => {
     // Check whether WebGPU is available
@@ -22,9 +23,11 @@ const main = () => {
 
     ui.loadingDialogProgress(0.5);
     fetchAndUnpackData(function on_success(db:Database) {
+        //console.log(db);
         ui.loadingDialogSuccess("We're all set and ready");
         ui.showMainMenu();
         ui.showCanvas();
+        ui.initWithData();
         renderer.init().then(() => {
             renderer.renderFrame();
         });
@@ -32,7 +35,7 @@ const main = () => {
         var doitdelayed:number;
         window.addEventListener('resize', function(){
             this.clearTimeout(doitdelayed);
-            doitdelayed = this.setTimeout(() => { renderer.renderFrame(); }, 100);
+            doitdelayed = this.setTimeout(() => { renderer.renderFrame(true); }, 100);
         });
     }, function on_failure(msg:string) {
         ui.loadingDialogError(msg);

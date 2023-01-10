@@ -34,15 +34,13 @@
         <h3>Time Selection</h3>
         <div>
             <p>
-                Time Range A: <span id="lbl-tra" class="time-range">1850 - 1890</span>
+                Time Range A: <span id="lbl-tra" class="time-range">1990 - 2000</span>
             </p>
             <div id="s-tra"></div>
             <p>
-                Time Range B: <span id="lbl-trb" class="time-range">1950 - 1990</span>
+                Time Range B: <span id="lbl-trb" class="time-range">2000 - 2013</span>
             </p>
             <div id="s-trb"></div>
-        
-
                 <p>Compare avg. Temperature of:</p>
                 <select name="s-compare" id="s-compare">
                     <option value=-1 selected>Whole Year</option>
@@ -59,13 +57,12 @@
                     <option value=10>November</option>
                     <option value=11>December</option>
                 </select>
- 
         </div>
 
         <h3>Grid Settings</h3>
         <div>
             <p>
-                Grid-Scale: <span id="lbl-gscale" class="time-range">0.006</span>
+                Grid-Scale: <span id="lbl-gscale" class="time-range">0.01</span>
             </p>
             <div id="s-gscale"></div>
             <p>
@@ -95,6 +92,9 @@
 
             <p>Color C:</p>
             <input type="text" id="cp-colc" value="rgba(178,24,43,0.8)"/>
+
+            <p>Empty Color:</p>
+            <input type="text" id="cp-colnull" value="rgba(255,255,255,0.05)"/>
         </div>
     </div>
 

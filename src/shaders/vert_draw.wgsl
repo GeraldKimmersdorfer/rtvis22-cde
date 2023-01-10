@@ -7,12 +7,17 @@ struct Uniforms {
 	gridProperties: vec4<f32>,		// hexagon size, vertical space, horizontal space, border
     screenSize: vec2<u32>,			// the size of the viewport
     gridResolution: vec2<u32>,		// resolution of the grid
-    
+
+    timeRangeBounds: vec4<u32>,     // contains TimeAMin, TimeAMax, TimeBMin, TimeBMax already in the appropriate dm
+    monthComparison: i32,           // which month to compare (-1... whole year, 0...January, ...)
+    firstMonthIndex: u32,           // contains the index of the first month. (in the dataset the first month is dec 1743 therefore it will be 11)
+
     gridAspect: u32,                // 1 if grid should respect viewport aspect ratio
     colorMode: u32,                 // 0...sequential, 1...diverging
     colorA: vec4<f32>,              // color for max values
     colorB: vec4<f32>,              // color for 0 (if diverging)
-    colorC: vec4<f32>               // color for min values
+    colorC: vec4<f32>,              // color for min values
+    colorNull: vec4<f32>            // color for empty cell
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -76,14 +81,18 @@ fn vs_main(
     let scale = 2.0;
     let offset = vec2<f32>(1.0, 1.0);
     let pos_transformed:vec2<f32> = vec2<f32>(scale, scale) * gridVal.xy - offset;
-    let size_transformed:f32 = uniforms.gridProperties.x * scale * (1.0 - uniforms.gridProperties.w);
+    var size_transformed:vec2<f32> = vec2<f32>(uniforms.gridProperties.x * scale * (1.0 - uniforms.gridProperties.w));
+    if (uniforms.gridAspect == 1) {
+        let aspect:f32 = f32(uniforms.screenSize.x) / f32(uniforms.screenSize.y);
+        size_transformed.x /= aspect;
+    }
     output.Position = vec4<f32>(pos_transformed + positions[vertexIndex] * size_transformed, 0f, 1f);
 
     let data_availabe:bool = gridVal.a > 0.0;
     if (data_availabe) {
         output.vColor = color_from_val(gridVal.b);
     } else {
-        output.vColor = vec4<f32>(vec3<f32>(1.0, 1.0, 1.0), 0.05);
+        output.vColor = uniforms.colorNull;
     }
     
     return output;

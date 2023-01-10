@@ -1,5 +1,7 @@
 import { AnyMxRecord } from "dns";
 import $ from "jquery";
+import { DB } from "./db";
+import { getMonthDifference } from "./helper";
 
 import * as renderer from './renderer';
 
@@ -74,25 +76,43 @@ export const InitUserInterface = () => {
       range: true,
       min: 1800,
       max: 2020,
-      values: [ 1850, 1890 ],
+      values: [ 1990, 2000 ],
       slide: function( _event: any, ui: any ) {
+        var start = new Date(ui.values[0], 0, 1);
+        var end = new Date(ui.values[1], 11, 30);
+        if (start < DB.bounds_date.min) start = DB.bounds_date.min;
+        if (end > DB.bounds_date.max) end = DB.bounds_date.max;
+        renderer.uniformBuffer.timeRangeBounds.x_u32 = getMonthDifference(DB.bounds_date.min, start);
+        renderer.uniformBuffer.timeRangeBounds.y_u32 = getMonthDifference(DB.bounds_date.min, end);
         $( "#lbl-tra" ).html(ui.values[ 0 ] + " - " + ui.values[ 1 ] );
       }
+    }).on("slidestop", (e:any, ui:any) => {
+      renderer.renderFrame();
     });
     $( "#s-trb" ).slider({
       range: true,
       min: 1800,
       max: 2020,
-      values: [ 1950, 1990 ],
+      values: [ 2000, 2013 ],
       slide: function( _event: any, ui: any ) {
+        var start = new Date(ui.values[0], 0, 1);
+        var end = new Date(ui.values[1], 11, 30);
+        if (start < DB.bounds_date.min) start = DB.bounds_date.min;
+        if (end > DB.bounds_date.max) end = DB.bounds_date.max;
+        renderer.uniformBuffer.timeRangeBounds.z_u32 = getMonthDifference(DB.bounds_date.min, start);
+        renderer.uniformBuffer.timeRangeBounds.w_u32 = getMonthDifference(DB.bounds_date.min, end);
+        
         $( "#lbl-trb" ).html(ui.values[ 0 ] + " - " + ui.values[ 1 ] );
       }
+    }).on("slidestop", (e:any, ui:any) => {
+      console.log(renderer.uniformBuffer.timeRangeBounds);
+      renderer.renderFrame();
     });
 
     $( "#s-gscale" ).slider({
       min: 2,
       max: 50,
-      value: 6,
+      value: 10,
       slide: function( _event: any, ui: any ) {
         $( "#lbl-gscale" ).html((ui.value / 1000).toString());
       }
@@ -112,7 +132,12 @@ export const InitUserInterface = () => {
         renderer.renderFrame(false, false, true);
       }
     });
-    $("#s-compare").selectmenu();
+    $("#s-compare").selectmenu({
+      change: function( event: any, data: any ) {
+        renderer.uniformBuffer.monthComparison_i32 = +data.item.value;
+        renderer.renderFrame();
+      }
+    });
     $("#s-colormode").selectmenu({
       change: function( event: any, data: any ) {
         renderer.uniformBuffer.colorMode_u32 = +data.item.value;
@@ -148,16 +173,35 @@ export const InitUserInterface = () => {
         renderer.renderFrame(false, false, true);
       }
     });
+    $("#cp-colnull").colorpicker({
+      alpha: true,
+      colorFormat: "RGBA",
+      select: (event:any, data:any) => {
+        renderer.uniformBuffer.colorNull = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
+        renderer.renderFrame(false, false, true);
+      }
+    });
     ($("#cb-gaspect") as any).checkboxradio({
       icon: true
     }).on("change", (event:any) => {
-      renderer.uniformBuffer.gridAspect_u32 = $(event.target).is(":checked") ? 1 : 0;
+      renderer.uniformBuffer.set_respect_aspect($(event.target).is(":checked"));
       renderer.renderFrame(true);
     });
     $("#mainMenuAccordion").accordion({
       heightStyle: "content",
       collapsible: true
     });
+}
+
+export const initWithData = () => {
+  $( "#s-tra" ).slider({
+    min: DB.bounds_date.min.getFullYear(),
+    max: DB.bounds_date.max.getFullYear()
+  });
+  $( "#s-trb" ).slider({
+    min: DB.bounds_date.min.getFullYear(),
+    max: DB.bounds_date.max.getFullYear()
+  });
 }
 
 export const showFooter = () => {

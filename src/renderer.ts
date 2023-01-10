@@ -28,7 +28,7 @@ var _averageBindGroup:GPUBindGroup;
 
 var _initialised:boolean = false;
 
-export var uniformBuffer:UniformBuffer = new UniformBuffer(0.006);
+export var uniformBuffer:UniformBuffer = new UniformBuffer();
 
 export const init = async () => {
     _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
@@ -42,6 +42,7 @@ export const init = async () => {
     });
 
     // Create Buffer
+    uniformBuffer.refresh_db_properties(DB);
     _uniformBuffer = CreateGPUBuffer(_device, uniformBuffer.get_buffer(), GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
     createGridBuffer();
     createPositionBuffer();
@@ -192,14 +193,15 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
     if (recreateGridBuffer) {
         createGridBuffer();
     }
-    // ToDo recreate Pos Buffer
+    if (recreatePositionBuffer) {
+        createPositionBuffer();
+    }
     if (recreateGridBuffer || recreatePositionBuffer) {
         createBindGroups();
     }
 
     // Update uniform buffer:
     _device.queue.writeBuffer(_uniformBuffer, 0, uniformBuffer.get_buffer());
-
     let pointCount = uniformBuffer.get_pointcount();
 
     var commandEncoder:GPUCommandEncoder;
