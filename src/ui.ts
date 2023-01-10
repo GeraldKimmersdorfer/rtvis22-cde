@@ -27,11 +27,13 @@ const keyDownHandler = (e:any) => {
     // Hide/Show UI
     let isShown = $("#mainMenu").dialog("isOpen");
     if (isShown) {
-      $( "#mainMenu" ).dialog("close");
-      $("#footer").fadeOut(800);
+      hideMainMenu();
+      hideFooter();
+      hideInfoMenu();
     } else {
-      $( "#mainMenu" ).dialog("open");
-      $("#footer").fadeIn(800);
+      showMainMenu();
+      showFooter();
+      showFooter();
     }
   }
 }
@@ -72,6 +74,18 @@ export const InitUserInterface = () => {
         duration: 800
       }
   });
+  $( "#infoMenu" ).dialog({
+    position: { my: "right top", at: "right top", of: window },
+    dialogClass: "no-close",
+    show: {
+      effect: "drop",
+      duration: 800
+    },
+    hide: {
+      effect: "drop",
+      duration: 800
+    }
+});
   $( "#s-tra" ).slider({
       range: true,
       min: 1800,
@@ -191,6 +205,20 @@ export const InitUserInterface = () => {
       heightStyle: "content",
       collapsible: true
     });
+    var delayTimer:any;
+    $("#canvas-webgpu").mousemove((e:any) => {
+      clearTimeout(delayTimer);
+      delayTimer = setTimeout(() => {
+        renderer.uniformBuffer.determine_hover_cell(e.clientX, e.clientY);
+        renderer.renderFrame(false, false, true);
+      }, 10);
+      
+    }).mouseleave(() => {
+      setTimeout(() => {
+        renderer.uniformBuffer.hoverIndex_i32 = -1;
+        renderer.renderFrame(false, false, true);
+      }, 10);
+    });
 }
 
 export const initWithData = () => {
@@ -208,8 +236,24 @@ export const showFooter = () => {
     $("#footer").fadeIn(800);
 }
 
+export const hideFooter = () => {
+  $("#footer").fadeOut(800);
+}
+
 export const showMainMenu = () => {
-    $( "#mainMenu" ).dialog( "open" );
+    $( "#mainMenu" ).dialog( "open" );  
+}
+
+export const hideMainMenu = () => {
+  $( "#mainMenu" ).dialog( "close" );  
+}
+
+export const showInfoMenu = () => {
+  $("#infoMenu").dialog("open");
+}
+
+export const hideInfoMenu = () => {
+  $("#infoMenu").dialog("close");
 }
 
 export const showCanvas = () => {

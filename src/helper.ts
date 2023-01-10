@@ -23,8 +23,7 @@ export const formatMilliseconds = (s:number) =>  {
   }
 }
 
-export const CreateGPUBuffer = (device:GPUDevice, data:ArrayBuffer, 
-  usageFlag:GPUBufferUsageFlags = GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST) => {
+export const CreateFilledGPUBuffer = (device:GPUDevice, data:ArrayBuffer, usageFlag:GPUBufferUsageFlags = GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST):GPUBuffer => {
   const buffer = device.createBuffer({
       size: data.byteLength,
       usage: usageFlag,
@@ -33,4 +32,11 @@ export const CreateGPUBuffer = (device:GPUDevice, data:ArrayBuffer,
   new Uint8Array(buffer.getMappedRange()).set(new Uint8Array(data));
   buffer.unmap();
   return buffer;
+}
+
+export const CreateEmptyGPUBuffer = (device:GPUDevice, size:number, usageFlag:GPUBufferUsageFlags = GPUBufferUsage.STORAGE):GPUBuffer => {
+  return device.createBuffer({
+    size: size,
+    usage: usageFlag
+  });
 }

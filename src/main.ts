@@ -24,12 +24,13 @@ const main = () => {
     ui.loadingDialogProgress(0.5);
     fetchAndUnpackData(function on_success(db:Database) {
         //console.log(db);
-        ui.loadingDialogSuccess("We're all set and ready");
-        ui.showMainMenu();
-        ui.showCanvas();
         ui.initWithData();
         renderer.init().then(() => {
-            renderer.renderFrame();
+            renderer.renderFrame().then(() => {
+                ui.loadingDialogSuccess("We're all set and ready");
+                ui.showMainMenu();
+                ui.showCanvas();
+            });
         });
         
         var doitdelayed:number;

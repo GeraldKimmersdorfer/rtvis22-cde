@@ -2,7 +2,7 @@ import vert_draw_shader from './shaders/vert_draw.wgsl';
 import frag_draw_shader from './shaders/frag_draw.wgsl';
 import comp_aggregate_shader from './shaders/comp_aggregate.wgsl';
 import comp_average_shader from './shaders/comp_average.wgsl'
-import { CreateGPUBuffer } from './helper'
+import { CreateEmptyGPUBuffer, CreateFilledGPUBuffer } from './helper'
 import { UniformBuffer } from './rendering/buffer';
 import { DB } from './db';
 
@@ -15,6 +15,7 @@ var _context:GPUCanvasContext;
 var _positionBuffer:GPUBuffer;
 var _temperatureBuffer:GPUBuffer;
 var _gridBuffer:GPUBuffer;
+var _gridReadBuffer:GPUBuffer;
 var _minmaxValueBuffer:GPUBuffer;
 var _uniformBuffer:GPUBuffer;
 
@@ -43,11 +44,11 @@ export const init = async () => {
 
     // Create Buffer
     uniformBuffer.refresh_db_properties(DB);
-    _uniformBuffer = CreateGPUBuffer(_device, uniformBuffer.get_buffer(), GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
+    _uniformBuffer = CreateFilledGPUBuffer(_device, uniformBuffer.get_buffer(), GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
     createGridBuffer();
     createPositionBuffer();
     createTemperatureBuffer();
-    _minmaxValueBuffer = CreateGPUBuffer(_device, new ArrayBuffer(4 * 4), GPUBufferUsage.STORAGE);
+    _minmaxValueBuffer = CreateEmptyGPUBuffer(_device, 4 * 4, GPUBufferUsage.STORAGE);
 
     createPipelines(format);
     createBindGroups();
@@ -58,8 +59,12 @@ export const init = async () => {
 const createGridBuffer = () => {
     uniformBuffer.set_screensize(_canvas.width, _canvas.height);
     let pointCount = uniformBuffer.get_pointcount();
-    let grid = new Float32Array(pointCount * 4);
-    _gridBuffer = CreateGPUBuffer(_device, grid.buffer, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX);
+    _gridBuffer = CreateEmptyGPUBuffer(_device, pointCount * 4 * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC);
+}
+
+const createGridReadBuffer = () => {
+    let pointCount = uniformBuffer.get_pointcount();
+    _gridReadBuffer = CreateEmptyGPUBuffer(_device, _gridBuffer.size, GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST);
 }
 
 const createPositionBuffer = () => {
@@ -77,7 +82,7 @@ const createPositionBuffer = () => {
         pabView.setInt32(i*16+8, DB.positions[i]['id_min'], true);
         pabView.setInt32(i*16+12, DB.positions[i]['id_max'], true);
     }
-    _positionBuffer = CreateGPUBuffer(_device, positionsArrayBuffer, GPUBufferUsage.STORAGE);
+    _positionBuffer = CreateFilledGPUBuffer(_device, positionsArrayBuffer, GPUBufferUsage.STORAGE);
 }
 
 const createTemperatureBuffer = () => {
@@ -88,7 +93,7 @@ const createTemperatureBuffer = () => {
         tabView.setFloat32(i*12+4, DB.temperatures[i].avgt, true);
         tabView.setUint32(i*12+8, DB.temperatures[i].src, true);
     }
-    _temperatureBuffer = CreateGPUBuffer(_device, temperaturesArrayBuffer, GPUBufferUsage.STORAGE);
+    _temperatureBuffer = CreateFilledGPUBuffer(_device, temperaturesArrayBuffer, GPUBufferUsage.STORAGE);
 }
 
 const createPipelines = (format:GPUTextureFormat) => {
@@ -189,6 +194,9 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
         createBindGroups();
     }
 
+    // Create readback buffer:
+    createGridReadBuffer();
+
     // Update uniform buffer:
     _device.queue.writeBuffer(_uniformBuffer, 0, uniformBuffer.get_buffer());
     let pointCount = uniformBuffer.get_pointcount();
@@ -240,4 +248,34 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
     await _device.queue.onSubmittedWorkDone();
     console.log(`Rendering finished after ${Date.now() - start} ms`);
 
+    /*
+    commandEncoder = _device.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(_gridBuffer, 0, _gridReadBuffer, 0, _gridReadBuffer.size);
+    _device.queue.submit([commandEncoder.finish()]);
+    await _gridReadBuffer.mapAsync(GPUMapMode.READ);
+    const copyArrayBuffer:ArrayBuffer = _gridReadBuffer.getMappedRange();
+    const dvGridReadBuffer:DataView = new DataView(copyArrayBuffer);
+    console.log(copyArrayBuffer);
+    var gridData = new Array(uniformBuffer.gridResolution.x_u32).fill(false).map(() => new Array(uniformBuffer.gridResolution.y_u32).fill(false));
+    console.log(gridData);
+    for (var i = 0; i < copyArrayBuffer.byteLength / 4 / 4; i++) {
+        let col = i % uniformBuffer.gridResolution.x_u32;
+        let row = Math.floor(i / uniformBuffer.gridResolution.x_u32);
+        gridData[col][row] = {
+            mPoint: { 
+                x: dvGridReadBuffer.getFloat32(i*16, true),
+                y: dvGridReadBuffer.getFloat32(i*16+4, true)
+            },
+            value: dvGridReadBuffer.getFloat32(i*16+8, true),
+            valueN: dvGridReadBuffer.getUint32(i*16+12, true)
+        };
+    }
+    console.log(gridData);*/
+
+}
+
+interface GridEntry {
+    mPoint: {x:number, y:number},
+    value: number,
+    valueN: number
 }

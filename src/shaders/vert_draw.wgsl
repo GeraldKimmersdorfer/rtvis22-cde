@@ -17,7 +17,9 @@ struct Uniforms {
     colorA: vec4<f32>,              // color for max values
     colorB: vec4<f32>,              // color for 0 (if diverging)
     colorC: vec4<f32>,              // color for min values
-    colorNull: vec4<f32>            // color for empty cell
+    colorNull: vec4<f32>,            // color for empty cell
+
+    hoverIndex: i32                 // contains the id of the active grid cell
 };
 
 struct GridEntry {
@@ -95,6 +97,9 @@ fn vs_main(
         let aspect:f32 = f32(uniforms.screenSize.x) / f32(uniforms.screenSize.y);
         size_transformed.x /= aspect;
     }
+    if (uniforms.hoverIndex == i32(instanceIndex)) {
+        size_transformed *= (1.0 + uniforms.gridProperties.w * 2.0);
+    }
     output.Position = vec4<f32>(pos_transformed + positions[vertexIndex] * size_transformed, 0f, 1f);
 
     let data_availabe:bool = gridVal.valueN > 0;
@@ -102,6 +107,12 @@ fn vs_main(
         output.vColor = color_from_val(gridVal.value);
     } else {
         output.vColor = uniforms.colorNull;
+    }
+    if (uniforms.hoverIndex > 0) {
+        output.vColor.a *= 0.5;
+    }
+    if (uniforms.hoverIndex == i32(instanceIndex)) {
+        output.vColor.a = output.vColor.a * 2.0 + 0.1;        
     }
     
     return output;
