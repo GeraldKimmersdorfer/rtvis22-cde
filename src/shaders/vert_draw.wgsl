@@ -20,8 +20,15 @@ struct Uniforms {
     colorNull: vec4<f32>            // color for empty cell
 };
 
+struct GridEntry {
+    mPoint: vec2<f32>,
+    value: f32,
+    valueN: u32
+}
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-@group(0) @binding(1) var<storage, read> minmaxvalues: vec4<f32>;
+@group(0) @binding(1) var<storage, read> grid: array<GridEntry>;
+@group(0) @binding(2) var<storage, read> minmaxvalues: vec4<f32>;
 
 
 /*
@@ -73,14 +80,16 @@ fn color_from_val(val: f32) -> vec4<f32>
 
 @vertex
 fn vs_main(
-    @location(0) gridVal: vec4<f32>,
     @builtin(vertex_index) vertexIndex: u32,
     @builtin(instance_index) instanceIndex: u32
 ) -> Output {
     var output: Output;
+
+    let gridVal = grid[instanceIndex];
+
     let scale = 2.0;
     let offset = vec2<f32>(1.0, 1.0);
-    let pos_transformed:vec2<f32> = vec2<f32>(scale, scale) * gridVal.xy - offset;
+    let pos_transformed:vec2<f32> = vec2<f32>(scale) * gridVal.mPoint - offset;
     var size_transformed:vec2<f32> = vec2<f32>(uniforms.gridProperties.x * scale * (1.0 - uniforms.gridProperties.w));
     if (uniforms.gridAspect == 1) {
         let aspect:f32 = f32(uniforms.screenSize.x) / f32(uniforms.screenSize.y);
@@ -88,9 +97,9 @@ fn vs_main(
     }
     output.Position = vec4<f32>(pos_transformed + positions[vertexIndex] * size_transformed, 0f, 1f);
 
-    let data_availabe:bool = gridVal.a > 0.0;
+    let data_availabe:bool = gridVal.valueN > 0;
     if (data_availabe) {
-        output.vColor = color_from_val(gridVal.b);
+        output.vColor = color_from_val(gridVal.value);
     } else {
         output.vColor = uniforms.colorNull;
     }

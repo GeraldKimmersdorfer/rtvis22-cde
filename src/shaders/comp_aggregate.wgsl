@@ -27,9 +27,15 @@ struct TemperatureEntry {
     src: u32
 }
 
+struct GridEntry {
+    mPoint: vec2<f32>,
+    value: f32,
+    valueN: u32
+}
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 /* NOTE: I had to figure out the hardway that compute shaders can't write in an array<vec3<f32>>... */
-@group(0) @binding(1) var<storage, read_write> grid: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> grid: array<GridEntry>;
 @group(0) @binding(2) var<storage, read> positions: array<PositionEntry>;
 @group(0) @binding(3) var<storage, read> temperatures: array<TemperatureEntry>;
 
@@ -48,7 +54,8 @@ fn cs_main(
     @builtin(global_invocation_id) globalId: vec3<u32>
 ) {
     let i: u32 = globalId.x;
-    let N: u32 = uniforms.gridResolution.x * uniforms.gridResolution.y;	
+    let N: u32 = uniforms.gridResolution.x * uniforms.gridResolution.y;
+    var gridValue:GridEntry;
 	// Guard against out-of-bounds workgroup sizes
 	if (i >= N) {
 		return;
@@ -66,10 +73,11 @@ fn cs_main(
         let x0 = uniforms.gridProperties.z / 2.0;
         mPointPos.x += x0;
     }
+    gridValue.mPoint = mPointPos;
 
     //var val:f32 = f32(i) / f32(N);
     var val = 0.0;
-    var alpha = 0.0;
+    var valN:u32 = 0;
 
     let posN = arrayLength(&positions);
     var tempSum: vec2<f32> = vec2<f32>(0.0, 0.0);
@@ -101,9 +109,12 @@ fn cs_main(
     if (tempN.x > 0 && tempN.y > 0) { // Check for divbyzero error (no entry in given time range and position)
         var tempAvg: vec2<f32> = tempSum / vec2<f32>(tempN);
         val = tempAvg[1] - tempAvg[0];
-        alpha = 1.0;
+        valN = tempN.x + tempN.y;
     }
 
-    grid[i] = vec4<f32>(mPointPos, val, alpha);
+    gridValue.value = val;
+    gridValue.valueN = valN;
+
+    grid[i] = gridValue;
     
 }

@@ -118,19 +118,7 @@ const createPipelines = (format:GPUTextureFormat) => {
             module: _device.createShaderModule({                    
                 code: vert_draw_shader
             }),
-            entryPoint: "vs_main",
-            buffers:[
-                {
-                    arrayStride: 4 * 4,
-                    stepMode: "instance",
-                    attributes: [{
-                        shaderLocation: 0,
-                        format: "float32x4",
-                        offset: 0
-                    }
-                    ]
-                }
-            ]
+            entryPoint: "vs_main"
         },
         fragment: {
             module: _device.createShaderModule({                    
@@ -182,7 +170,8 @@ const createBindGroups = () => {
 		layout: _drawPipeline.getBindGroupLayout(0),
 		entries: [
 			{ binding: 0, resource: { buffer: _uniformBuffer } },
-            { binding: 1, resource: { buffer: _minmaxValueBuffer } }
+            { binding: 1, resource: { buffer: _gridBuffer } },
+            { binding: 2, resource: { buffer: _minmaxValueBuffer } }
 		]
 	});
 }
@@ -243,7 +232,6 @@ export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePo
     });
     renderPass.setPipeline(_drawPipeline);
     renderPass.setBindGroup(0, _drawBindGroup);
-    renderPass.setVertexBuffer(0, _gridBuffer);
     renderPass.draw(6, pointCount);
     renderPass.end();
         

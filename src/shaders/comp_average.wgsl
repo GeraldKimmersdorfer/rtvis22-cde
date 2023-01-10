@@ -16,8 +16,14 @@ struct Uniforms {
     colorNull: vec4<f32>            // color for empty cell
 };
 
+struct GridEntry {
+    mPoint: vec2<f32>,
+    value: f32,
+    valueN: u32
+}
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-@group(0) @binding(1) var<storage, read_write> grid: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> grid: array<GridEntry>;
 @group(0) @binding(2) var<storage, read_write> minmaxvalues: vec4<f32>;
 
 
@@ -32,11 +38,11 @@ fn cs_main(
     // Better way would be to already compute min/max in aggregate step of each workgroup and then
     // iterate over this (reduced) grid to compute the global min/max
 	if (i == 0) {
-		var minVal:f32 = grid[0].z;
-        var maxVal:f32 = grid[0].z;
+		var minVal:f32 = grid[0].value;
+        var maxVal:f32 = grid[0].value;
         for (var j:u32 = 1; j < N; j++) {
-            minVal = min(minVal, grid[j].z);
-            maxVal = max(maxVal, grid[j].z);
+            minVal = min(minVal, grid[j].value);
+            maxVal = max(maxVal, grid[j].value);
         }
         minmaxvalues = vec4<f32>(minVal, maxVal, maxVal - minVal, 0.0);
 	}    
