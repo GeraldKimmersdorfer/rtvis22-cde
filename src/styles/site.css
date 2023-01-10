@@ -11,6 +11,10 @@ html {
     height: 100%;
 }
 
+p {
+  margin-block-end: 0.5em;
+}
+
  body {
     margin: 0px;
     overflow: hidden; /* Hide scrollbars */
@@ -50,6 +54,14 @@ html {
   to {
     transform: rotate(359deg);
   }
+}
+
+#mainMenu {
+  padding: 0;
+}
+
+#mainMenu .ui-accordion-content {
+  padding: 1em;
 }
 
   #footer {

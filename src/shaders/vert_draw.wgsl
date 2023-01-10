@@ -4,10 +4,11 @@ struct Output {
 };
 
 struct Uniforms {
-	gridProperties: vec4<f32>,		// hexagon size, vertical space, horizontal space, unknown
+	gridProperties: vec4<f32>,		// hexagon size, vertical space, horizontal space, border
     screenSize: vec2<u32>,			// the size of the viewport
     gridResolution: vec2<u32>,		// resolution of the grid
     
+    gridAspect: u32,                // 1 if grid should respect viewport aspect ratio
     colorMode: u32,                 // 0...sequential, 1...diverging
     colorA: vec4<f32>,              // color for max values
     colorB: vec4<f32>,              // color for 0 (if diverging)
@@ -62,9 +63,7 @@ fn color_from_val(val: f32) -> vec4<f32>
             let p:f32 = val / minmaxvalues.g;
             return mix(uniforms.colorB, uniforms.colorA, p);
         }
-    }
-    
-    
+    } 
 }
 
 @vertex
@@ -77,7 +76,7 @@ fn vs_main(
     let scale = 2.0;
     let offset = vec2<f32>(1.0, 1.0);
     let pos_transformed:vec2<f32> = vec2<f32>(scale, scale) * gridVal.xy - offset;
-    let size_transformed:f32 = uniforms.gridProperties.x * scale * 0.9;
+    let size_transformed:f32 = uniforms.gridProperties.x * scale * (1.0 - uniforms.gridProperties.w);
     output.Position = vec4<f32>(pos_transformed + positions[vertexIndex] * size_transformed, 0f, 1f);
 
     let data_availabe:bool = gridVal.a > 0.0;

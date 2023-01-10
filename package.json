@@ -22,10 +22,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/jquery.colorpicker": "^1.4.35",
     "jquery": "^3.6.1",
     "jquery-ui": "^1.13.2",
     "lzma": "^2.3.2",
-    "material-symbols": "^0.4.1"
+    "material-symbols": "^0.4.1",
+    "vanderlee-colorpicker": "^1.2.16"
   },
   "devDependencies": {
     "@types/jquery": "^3.5.14",

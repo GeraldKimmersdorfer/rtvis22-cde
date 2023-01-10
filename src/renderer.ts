@@ -3,120 +3,118 @@ import frag_draw_shader from './shaders/frag_draw.wgsl';
 import comp_aggregate_shader from './shaders/comp_aggregate.wgsl';
 import comp_average_shader from './shaders/comp_average.wgsl'
 import { CreateGPUBuffer } from './helper'
+import { UniformBuffer } from './rendering/buffer';
+import { DB } from './db';
 
 
-var canvas:HTMLCanvasElement;
-var adapter:GPUAdapter;
-var device:GPUDevice;
-var context:GPUCanvasContext;
+var _canvas:HTMLCanvasElement;
+var _adapter:GPUAdapter;
+var _device:GPUDevice;
+var _context:GPUCanvasContext;
 
-var positionBuffer:GPUBuffer;
-var temperatureBuffer:GPUBuffer;
+var _positionBuffer:GPUBuffer;
+var _temperatureBuffer:GPUBuffer;
+var _gridBuffer:GPUBuffer;
+var _minmaxValueBuffer:GPUBuffer;
+var _uniformBuffer:GPUBuffer;
 
-var gridBuffer:GPUBuffer;
-var minmaxValueBuffer:GPUBuffer;
-var uniformBuffer:GPUBuffer;
+var _drawPipeline:GPURenderPipeline;
+var _aggregatePipeline:GPUComputePipeline;
+var _averagePipeline:GPUComputePipeline;
 
+var _drawBindGroup:GPUBindGroup;
+var _aggregateBindGroup:GPUBindGroup;
+var _averageBindGroup:GPUBindGroup;
 
-export const init = async (db:any) => {
+var _initialised:boolean = false;
 
-}
+export var uniformBuffer:UniformBuffer = new UniformBuffer(0.006);
 
-export const createGridBuffer = () => {
-
-}
-
-export const RenderTriangle = async (db:any) => {
-    canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
-    adapter = await navigator.gpu?.requestAdapter() as GPUAdapter;       
-    device = await adapter?.requestDevice() as GPUDevice;
-    context = canvas.getContext('webgpu', { alpha: false }) as unknown as GPUCanvasContext;
-    const format = 'bgra8unorm';
-    context.configure({
-        device: device,
+export const init = async () => {
+    _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
+    _adapter = await navigator.gpu?.requestAdapter() as GPUAdapter;       
+    _device = await _adapter?.requestDevice() as GPUDevice;
+    _context = _canvas.getContext('webgpu', { alpha: false }) as unknown as GPUCanvasContext;
+    const format:GPUTextureFormat = 'bgra8unorm';
+    _context.configure({
+        device: _device,
         format: format,
     });
 
-    let pointSize = 0.01;
+    // Create Buffer
+    _uniformBuffer = CreateGPUBuffer(_device, uniformBuffer.get_buffer(), GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
+    createGridBuffer();
+    createPositionBuffer();
+    createTemperatureBuffer();
+    _minmaxValueBuffer = CreateGPUBuffer(_device, new ArrayBuffer(4 * 4), GPUBufferUsage.STORAGE);
 
-    let vs = 3.0 / 2.0 * pointSize;
-    let hs = Math.sqrt(3) * pointSize;
-    let x0 = hs / 2.0;
-    let resolution = [Math.ceil(1.0 / hs) + 1, Math.ceil(1.0 / vs) + 1]
-    let pointCount = resolution[0] * resolution[1];
-    
-    
+    createPipelines(format);
+    createBindGroups();
+
+    _initialised = true;
+}
+
+const createGridBuffer = () => {
+    uniformBuffer.set_screensize(_canvas.width, _canvas.height);
+    let pointCount = uniformBuffer.get_pointcount();
     let grid = new Float32Array(pointCount * 4);
-    gridBuffer = CreateGPUBuffer(device, grid.buffer, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX);
+    _gridBuffer = CreateGPUBuffer(_device, grid.buffer, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX);
+}
 
-    // Create uniform buffer
-    const uniformArrayBuffer = new ArrayBuffer(24 * 4);
-    const uabView = new DataView(uniformArrayBuffer);
-
-    uabView.setFloat32(0, pointSize, true);
-    uabView.setFloat32(4, vs, true);
-    uabView.setFloat32(8, hs, true);
-    uabView.setFloat32(12, 0.0, true);
-    uabView.setUint32(16, canvas.width, true);
-    uabView.setUint32(20, canvas.height, true);
-    uabView.setUint32(24, resolution[0], true);
-    uabView.setUint32(28, resolution[1], true);
-
-    // COLOR: https://colorbrewer2.org/#type=diverging&scheme=RdBu&n=9
-    uabView.setUint32(32, 1);   // color mode
-    // colorA
-    uabView.setFloat32(48, 33.0/255.0, true);
-    uabView.setFloat32(52, 102.0/255.0, true);
-    uabView.setFloat32(56, 172.0/255.0, true);
-    uabView.setFloat32(60, 1.0, true);
-    // colorB
-    uabView.setFloat32(64, 255.0/255.0, true);
-    uabView.setFloat32(68, 255.0/255.0, true);
-    uabView.setFloat32(72, 255.0/255.0, true);
-    uabView.setFloat32(76, 0.5, true);
-    // colorC
-    uabView.setFloat32(80, 178.0/255.0, true);
-    uabView.setFloat32(84, 24.0/255.0, true);
-    uabView.setFloat32(88, 43.0/255.0, true);
-    uabView.setFloat32(92, 1.0, true);
-
-    uniformBuffer = CreateGPUBuffer(device, uniformArrayBuffer, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
-
-
-    // Calculate projected points:
-    let R = 1.0     //earth radius
-    let mapwidth = 1.0
-    let mapheight = 1.0
-    for (let i = 0; i < db.positions.length; i++) {
-        db.positions[i]['x'] = (db.positions[i]['lon'] + 180) * (mapwidth / 360);
-        db.positions[i]['y'] = (db.positions[i]['lat'] + 90) * (mapheight / 180);
+const createPositionBuffer = () => {
+    // EQUIRECTANGULAR PROJECTION (formulas taken from here: https://en.wikipedia.org/wiki/Equirectangular_projection)
+    for (let i = 0; i < DB.positions.length; i++) {
+        DB.positions[i]['x'] = (DB.positions[i]['lon'] + 180) * (1.0 / 360);
+        DB.positions[i]['y'] = (DB.positions[i]['lat'] + 90) * (1.0 / 180);
     }
 
-    const positionsArrayBuffer = new ArrayBuffer(db.positions.length * 4 * 4);
+    const positionsArrayBuffer = new ArrayBuffer(DB.positions.length * 4 * 4);
     const pabView = new DataView(positionsArrayBuffer);
-    for (let i = 0; i < db.positions.length; i++) {
-        pabView.setFloat32(i*16, db.positions[i]['x'], true);
-        pabView.setFloat32(i*16+4, db.positions[i]['y'], true);
-        pabView.setInt32(i*16+8, db.positions[i]['id_min'], true);
-        pabView.setInt32(i*16+12, db.positions[i]['id_max'], true);
+    for (let i = 0; i < DB.positions.length; i++) {
+        pabView.setFloat32(i*16, DB.positions[i]['x'], true);
+        pabView.setFloat32(i*16+4, DB.positions[i]['y'], true);
+        pabView.setInt32(i*16+8, DB.positions[i]['id_min'], true);
+        pabView.setInt32(i*16+12, DB.positions[i]['id_max'], true);
     }
-    positionBuffer = CreateGPUBuffer(device, positionsArrayBuffer, GPUBufferUsage.STORAGE);
+    _positionBuffer = CreateGPUBuffer(_device, positionsArrayBuffer, GPUBufferUsage.STORAGE);
+}
 
-    const temperaturesArrayBuffer = new ArrayBuffer(db.temperatures.length * 3 * 4);
+const createTemperatureBuffer = () => {
+    const temperaturesArrayBuffer = new ArrayBuffer(DB.temperatures.length * 3 * 4);
     const tabView = new DataView(temperaturesArrayBuffer);
-    for (let i = 0; i < db.temperatures.length; i++) {
-        tabView.setUint32(i*12, db.temperatures[i].dm, true);
-        tabView.setFloat32(i*12+4, db.temperatures[i].avgt, true);
-        tabView.setUint32(i*12+8, db.temperatures[i].src, true);
+    for (let i = 0; i < DB.temperatures.length; i++) {
+        tabView.setUint32(i*12, DB.temperatures[i].dm, true);
+        tabView.setFloat32(i*12+4, DB.temperatures[i].avgt, true);
+        tabView.setUint32(i*12+8, DB.temperatures[i].src, true);
     }
-    temperatureBuffer = CreateGPUBuffer(device, temperaturesArrayBuffer, GPUBufferUsage.STORAGE);
+    _temperatureBuffer = CreateGPUBuffer(_device, temperaturesArrayBuffer, GPUBufferUsage.STORAGE);
+}
 
-    minmaxValueBuffer = CreateGPUBuffer(device, new ArrayBuffer(4 * 4), GPUBufferUsage.STORAGE);
-    
-    const renderPipeline = device.createRenderPipeline({
+const createPipelines = (format:GPUTextureFormat) => {
+    _aggregatePipeline = _device.createComputePipeline({
+        layout: "auto",
+        compute: {
+            module: _device.createShaderModule({                    
+                code: comp_aggregate_shader
+            }),
+            entryPoint: "cs_main",
+        }
+    });
+
+    _averagePipeline = _device.createComputePipeline({
+        layout: "auto",
+        compute: {
+            module: _device.createShaderModule({
+                code: comp_average_shader
+            }),
+            entryPoint: "cs_main"
+        }
+    });
+
+    _drawPipeline = _device.createRenderPipeline({
         layout: 'auto',
         vertex: {
-            module: device.createShaderModule({                    
+            module: _device.createShaderModule({                    
                 code: vert_draw_shader
             }),
             entryPoint: "vs_main",
@@ -133,9 +131,8 @@ export const RenderTriangle = async (db:any) => {
                 }
             ]
         },
-        
         fragment: {
-            module: device.createShaderModule({                    
+            module: _device.createShaderModule({                    
                 code: frag_draw_shader
             }),
             entryPoint: "fs_main",
@@ -158,145 +155,99 @@ export const RenderTriangle = async (db:any) => {
             topology: "triangle-strip"
         }
     });
+}
 
-	const renderBindGroup = device.createBindGroup({
-		layout: renderPipeline.getBindGroupLayout(0),
+const createBindGroups = () => {
+    _aggregateBindGroup = _device.createBindGroup({
+        layout: _aggregatePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: _uniformBuffer } },
+            { binding: 1, resource: { buffer: _gridBuffer } },
+            { binding: 2, resource: { buffer: _positionBuffer } },
+            { binding: 3, resource: { buffer: _temperatureBuffer } }
+        ]
+    });
+
+    _averageBindGroup = _device.createBindGroup({
+        layout: _averagePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: _uniformBuffer } },
+            { binding: 1, resource: { buffer: _gridBuffer } },
+            { binding: 2, resource: { buffer: _minmaxValueBuffer } }
+        ]
+    });
+
+	_drawBindGroup = _device.createBindGroup({
+		layout: _drawPipeline.getBindGroupLayout(0),
 		entries: [
-			{ // Uniforms buffer
-				binding: 0,
-				resource: {
-					buffer: uniformBuffer
-				}
-			},
-            {
-                binding: 1,
-                resource: {
-                    buffer: minmaxValueBuffer
-                }
-            }
+			{ binding: 0, resource: { buffer: _uniformBuffer } },
+            { binding: 1, resource: { buffer: _minmaxValueBuffer } }
 		]
 	});
+}
 
-    const computeAggregatePipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: {
-            module: device.createShaderModule({                    
-                code: comp_aggregate_shader
-            }),
-            entryPoint: "cs_main",
-        }
-    });
+export const renderFrame = async (recreateGridBuffer:boolean = false, recreatePositionBuffer:boolean = false, onlyDrawStage:boolean = false) => {
+    if (!_initialised) return;
 
-    const computeAggregateBindGroup = device.createBindGroup({
-        layout: computeAggregatePipeline.getBindGroupLayout(0),
-        entries: [
-            {
-                binding: 0,
-                resource: {
-                    buffer: uniformBuffer
-                }
-            },
-            {
-                binding: 1,
-                resource: {
-                    buffer: gridBuffer
-                }
-            },
-            {
-                binding: 2,
-                resource: {
-                    buffer: positionBuffer
-                }
-            },
-            {
-                binding: 3,
-                resource: {
-                    buffer: temperatureBuffer
-                }
-            }
-        ]
-    });
+    if (recreateGridBuffer) {
+        createGridBuffer();
+    }
+    // ToDo recreate Pos Buffer
+    if (recreateGridBuffer || recreatePositionBuffer) {
+        createBindGroups();
+    }
 
-    const computeAveragePipeline = device.createComputePipeline({
-        layout: "auto",
-        compute: {
-            module: device.createShaderModule({
-                code: comp_average_shader
-            }),
-            entryPoint: "cs_main"
-        }
-    });
+    // Update uniform buffer:
+    _device.queue.writeBuffer(_uniformBuffer, 0, uniformBuffer.get_buffer());
 
-    const computeAverageBindGroup = device.createBindGroup({
-        layout: computeAveragePipeline.getBindGroupLayout(0),
-        entries: [
-            {
-                binding: 0,
-                resource: {
-                    buffer: uniformBuffer
-                }
-            },
-            {
-                binding: 1,
-                resource: {
-                    buffer: gridBuffer
-                }
-            },
-            {
-                binding: 2,
-                resource: {
-                    buffer: minmaxValueBuffer
-                }
-            }
-        ]
-    });
+    let pointCount = uniformBuffer.get_pointcount();
 
-    var commandEncoder = device.createCommandEncoder();
-    const aggregatePass = commandEncoder.beginComputePass();
-    aggregatePass.setPipeline(computeAggregatePipeline);
-    aggregatePass.setBindGroup(0, computeAggregateBindGroup);
-    aggregatePass.dispatchWorkgroups(Math.ceil(pointCount / 64));
-    aggregatePass.end();
-    
-    var start = Date.now();
-    device.queue.submit([commandEncoder.finish()]);
-    device.queue.onSubmittedWorkDone().then(val => {
+    var commandEncoder:GPUCommandEncoder;
+    if (!onlyDrawStage) {
+        commandEncoder = _device.createCommandEncoder();
+        const aggregatePass = commandEncoder.beginComputePass();
+        aggregatePass.setPipeline(_aggregatePipeline);
+        aggregatePass.setBindGroup(0, _aggregateBindGroup);
+        aggregatePass.dispatchWorkgroups(Math.ceil(pointCount / 64));
+        aggregatePass.end();
+        
+        var start = Date.now();
+        _device.queue.submit([commandEncoder.finish()]);
+        await _device.queue.onSubmittedWorkDone();
         console.log(`Aggregation finished after ${Date.now() - start} ms`);
-
-        commandEncoder = device.createCommandEncoder();
+    
+        commandEncoder = _device.createCommandEncoder();
         const avgPass = commandEncoder.beginComputePass();
-        avgPass.setPipeline(computeAveragePipeline);
-        avgPass.setBindGroup(0, computeAverageBindGroup);
+        avgPass.setPipeline(_averagePipeline);
+        avgPass.setBindGroup(0, _averageBindGroup);
         avgPass.dispatchWorkgroups(1);
         avgPass.end();
-
+    
         start = Date.now();
-        device.queue.submit([commandEncoder.finish()]);
-        device.queue.onSubmittedWorkDone().then(val => {
-            console.log(`Averaging finished after ${Date.now() - start} ms`);
-
-            commandEncoder = device.createCommandEncoder();
-            const textureView = context.getCurrentTexture().createView();
-            const renderPass = commandEncoder.beginRenderPass({
-                colorAttachments: [{
-                    view: textureView,
-                    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, //background color
-                    loadOp: 'clear',
-                    storeOp: 'store'
-                }]
-            });
-            renderPass.setPipeline(renderPipeline);
-            renderPass.setBindGroup(0, renderBindGroup);
-            renderPass.setVertexBuffer(0, gridBuffer);
-            renderPass.draw(6, pointCount);
-            renderPass.end();
-        
-            start = Date.now();
-            device.queue.submit([commandEncoder.finish()]);
-            device.queue.onSubmittedWorkDone().then(val => {
-                console.log(`Rendering finished after ${Date.now() - start} ms`);
-            });
-        });
+        _device.queue.submit([commandEncoder.finish()]);
+        await _device.queue.onSubmittedWorkDone();
+        console.log(`Averaging finished after ${Date.now() - start} ms`);
+    }
+    
+    commandEncoder = _device.createCommandEncoder();
+    const textureView = _context.getCurrentTexture().createView();
+    const renderPass = commandEncoder.beginRenderPass({
+        colorAttachments: [{
+            view: textureView,
+            clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, //background color
+            loadOp: 'clear',
+            storeOp: 'store'
+        }]
     });
+    renderPass.setPipeline(_drawPipeline);
+    renderPass.setBindGroup(0, _drawBindGroup);
+    renderPass.setVertexBuffer(0, _gridBuffer);
+    renderPass.draw(6, pointCount);
+    renderPass.end();
+        
+    start = Date.now();
+    _device.queue.submit([commandEncoder.finish()]);
+    await _device.queue.onSubmittedWorkDone();
+    console.log(`Rendering finished after ${Date.now() - start} ms`);
 
 }

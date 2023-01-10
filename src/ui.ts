@@ -1,10 +1,17 @@
+import { AnyMxRecord } from "dns";
 import $ from "jquery";
+
+import * as renderer from './renderer';
 
 require('jquery-ui/ui/widgets/dialog');
 require('jquery-ui/ui/widgets/progressbar');
 require('jquery-ui/ui/widgets/selectmenu');
 require('jquery-ui/ui/widgets/slider');
-
+require('jquery-ui/ui/widgets/accordion');
+require('jquery-ui/ui/effects/effect-drop');
+require('jquery-ui/ui/effects/effect-fade');
+require('jquery-ui/ui/widgets/checkboxradio');
+require('vanderlee-colorpicker/jquery.colorpicker');
 
 // Shows the error message when webgpu is not available on current browser
 export const ShowNoWebGpuWarning = () => {
@@ -39,13 +46,12 @@ export const InitUserInterface = () => {
       window.addEventListener('keydown', keyDownHandler);
       windowResize();
   }
-
   $("#loadingDialog").dialog({
     position: { my: "center center", at: "center center", of: window },
     autoOpen: true,
     minWidth: 400,
     hide: {
-        effect: "drop",
+        effect: "fade",
         duration: 800
       }
   });
@@ -82,7 +88,76 @@ export const InitUserInterface = () => {
         $( "#lbl-trb" ).html(ui.values[ 0 ] + " - " + ui.values[ 1 ] );
       }
     });
-    $( "#s-compare" ).selectmenu();
+
+    $( "#s-gscale" ).slider({
+      min: 2,
+      max: 50,
+      value: 6,
+      slide: function( _event: any, ui: any ) {
+        $( "#lbl-gscale" ).html((ui.value / 1000).toString());
+      }
+    }).on("slidestop", (e:any, ui:any) => {
+      renderer.uniformBuffer.set_gridscale(ui.value / 1000);
+      renderer.renderFrame(true);
+    });
+
+    $( "#s-gborder" ).slider({
+      min: 0,
+      max: 80,
+      value: 10,
+      slide: function( _event: any, ui: any ) {
+        let newValue = ui.value / 100;
+        $( "#lbl-gborder" ).html(newValue.toString());
+        renderer.uniformBuffer.gridProperties.border = newValue;
+        renderer.renderFrame(false, false, true);
+      }
+    });
+    $("#s-compare").selectmenu();
+    $("#s-colormode").selectmenu({
+      change: function( event: any, data: any ) {
+        renderer.uniformBuffer.colorMode_u32 = +data.item.value;
+        if (renderer.uniformBuffer.colorMode_u32 == 0) {
+          $("#cp-colb-group").hide();
+        } else {
+          $("#cp-colb-group").show();
+        }
+        renderer.renderFrame(false, false, true);
+      }
+    });
+    $("#cp-cola").colorpicker({
+      alpha: true,
+      colorFormat: "RGBA",
+      select: (event:any, data:any) => {
+        renderer.uniformBuffer.colorA = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
+        renderer.renderFrame(false, false, true);
+      }
+    });
+    $("#cp-colb").colorpicker({
+      alpha: true,
+      colorFormat: "RGBA",
+      select: (event:any, data:any) => {
+        renderer.uniformBuffer.colorB = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
+        renderer.renderFrame(false, false, true);
+      }
+    });    
+    $("#cp-colc").colorpicker({
+      alpha: true,
+      colorFormat: "RGBA",
+      select: (event:any, data:any) => {
+        renderer.uniformBuffer.colorC = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
+        renderer.renderFrame(false, false, true);
+      }
+    });
+    ($("#cb-gaspect") as any).checkboxradio({
+      icon: true
+    }).on("change", (event:any) => {
+      renderer.uniformBuffer.gridAspect_u32 = $(event.target).is(":checked") ? 1 : 0;
+      renderer.renderFrame(true);
+    });
+    $("#mainMenuAccordion").accordion({
+      heightStyle: "content",
+      collapsible: true
+    });
 }
 
 export const showFooter = () => {

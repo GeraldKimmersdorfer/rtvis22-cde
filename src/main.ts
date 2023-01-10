@@ -4,8 +4,8 @@ import { CheckWebGPU } from './helper';
 import * as ui from './ui'
 
 import $ from "jquery";
-import { RenderTriangle } from './renderer';
-import { fetchAndUnpackData } from './datafetcher';
+import * as renderer from './renderer';
+import { Database, fetchAndUnpackData } from './db';
 
 // Entry-Point of Application
 const main = () => {
@@ -21,14 +21,18 @@ const main = () => {
     ui.showFooter();
 
     ui.loadingDialogProgress(0.5);
-    fetchAndUnpackData(function on_success(db:any) {
-        console.log(db);
+    fetchAndUnpackData(function on_success(db:Database) {
         ui.loadingDialogSuccess("We're all set and ready");
         ui.showMainMenu();
         ui.showCanvas();
-        RenderTriangle(db);
+        renderer.init().then(() => {
+            renderer.renderFrame();
+        });
+        
+        var doitdelayed:number;
         window.addEventListener('resize', function(){
-            RenderTriangle(db);
+            this.clearTimeout(doitdelayed);
+            doitdelayed = this.setTimeout(() => { renderer.renderFrame(); }, 100);
         });
     }, function on_failure(msg:string) {
         ui.loadingDialogError(msg);

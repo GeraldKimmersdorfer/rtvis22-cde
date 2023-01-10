@@ -14,6 +14,7 @@
       "@webgpu/types",
       "jquery",
       "jqueryui",
+      "jquery.colorpicker"
     ],
     "module": "es2015",         /* Specify what module code is generated. */
     "esModuleInterop": true,    /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */

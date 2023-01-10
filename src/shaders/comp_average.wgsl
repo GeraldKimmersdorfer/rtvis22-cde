@@ -1,8 +1,13 @@
 
 struct Uniforms {
-	gridProperties: vec4<f32>,		// hexagon size, vertical space, horizontal space, unknown
+	gridProperties: vec4<f32>,		// hexagon size, vertical space, horizontal space, border
     screenSize: vec2<u32>,			// the size of the viewport
-    gridResolution: vec2<u32>		// resolution of the grid
+    gridResolution: vec2<u32>,		// resolution of the grid
+    
+    colorMode: u32,                 // 0...sequential, 1...diverging
+    colorA: vec4<f32>,              // color for max values
+    colorB: vec4<f32>,              // color for 0 (if diverging)
+    colorC: vec4<f32>               // color for min values
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
