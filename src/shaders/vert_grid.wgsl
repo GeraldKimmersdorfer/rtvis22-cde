@@ -125,7 +125,7 @@ fn vs_main(
         output.vColor = uniforms.colorNull;
     }
     if (uniforms.hoverIndex > 0) {
-        output.vColor.a *= 0.8;
+        output.vColor.a *= 1.0; // 0.8
     }
     if (uniforms.hoverIndex == i32(instanceIndex)) {
         output.vColor.a = output.vColor.a * 1.5 + 0.1;

@@ -64,7 +64,7 @@ const keyDownHandler = (e:any) => {
       showFooter();
       showInfoMenu();
     }
-  } else if (e.keyCode == 72) { // Key: H
+  } else if (e.keyCode == 84) { // Key: T
     // Disable/Enable Hover
     if (hoverEnabled) {
       hoverEnabled = false;
@@ -73,6 +73,13 @@ const keyDownHandler = (e:any) => {
       $("#tooltip").clearQueue().fadeTo(200, 0);
     } else {
       hoverEnabled = true;
+    }
+  } else if (e.keyCode == 76) { // Key: L
+    let isShown = $("#legend").is(":visible");
+    if (isShown) {
+      hideLegend();
+    } else {
+      showLegend();
     }
   }
 }
@@ -321,7 +328,7 @@ export const showFooter = () => {
 
 export const hideFooter = () => {
   $("#footer").fadeOut(800);
-  $("#legend").delay(800).animate({bottom: "1%"}, 800);
+  $("#legend").delay(800).animate({bottom: "2%"}, 800);
 }
 
 export const showMainMenu = () => {

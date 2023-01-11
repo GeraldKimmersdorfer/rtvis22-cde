@@ -132,6 +132,16 @@ p {
   cursor: pointer;
 }
 
+.hotkey {
+  border: 1px solid rgba(255,255,255,0.5);
+  width: 20px;
+  border-radius: 5px;
+  line-height: 120%;
+  box-sizing: border-box;
+  display: inline-block;
+  text-align: center;
+}
+
 #b-leg {
   padding: 5px;
   box-sizing: border-box;
