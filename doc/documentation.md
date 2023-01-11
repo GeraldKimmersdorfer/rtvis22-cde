@@ -96,7 +96,7 @@ The _Grid Scale_ and _Grid Border_ settings affect the coverage of the hexagons 
 
 ![](images/configuration-grid.png)
 
-#### Color Settings
+### Color Settings
 
 The color settings section allows users to switch between a sequential or a diverging color map using a drop-down menu. Sequential color maps use a progression of colors between two colors, while diverging color maps use two different colors that progress through a neutral color in the middle. Users can select the start and end colors of the gradient for both types of color maps using a color picker. Additionally, when using a diverging color map, users can also select the neutral color in the middle. The section also offers the option to use a symmetric variant for both color maps, which shows the same range of values at both ends of the scale. In addition, this section provides an option to customize the colors of the empty hexagons and the world map background.
 
@@ -104,14 +104,14 @@ The color settings section allows users to switch between a sequential or a dive
 
 ![](images/visualization-color-maps.png)
 
-### Information Window
+## Information Window
 
 The information window is organized into two sections:
 
 1. The **general** section that displays information about the data currently being visualized.
 2. The **help** section that offers a brief introduction to the application and its features.
 
-#### General
+### General
 
 This section displays statistical values about the visualized data, which include:
 
@@ -125,8 +125,37 @@ This section displays statistical values about the visualized data, which includ
 
 ![](images/information-general.png)
 
-#### Help
+### Help
 
 This section offers a brief overview of the application, including its features, data sources, and useful keyboard shortcuts.
 
 ![](images/information-help.png)
+
+
+# Developing Notes
+
+## Getting the source code
+You can get the source code of the Climate Difference Explorer from our [github-page](https://github.com/GeraldKimmersdorfer/rtvis22-cde).
+```
+git clone https://github.com/GeraldKimmersdorfer/rtvis22-cde.git
+```
+
+## Setting up developing environment
+
+The application is developed using the `npm`-Manager, so before you can start coding you need to install [Node.js](https://nodejs.org/en/). To download the required packages execute the following command:
+```
+npm install 
+```
+
+That should be it. You can build the application by executing:
+```
+npm run dev
+```
+
+To generate a production build you may use `npm run prod`. If you wanna have hot-reload of your typescript and shader-files aswell as the webpack developing server you want to run:
+```
+npm run serve
+```
+
+### Note on working with Visual Studio Code
+I advice to use the [WGSL](https://marketplace.visualstudio.com/items?itemName=PolyMeilex.wgsl)-plugin for Code-Highlighting in Shader-Files. If you, for whatever reason don't want to work with the webpack server you can use the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer)-plugin.

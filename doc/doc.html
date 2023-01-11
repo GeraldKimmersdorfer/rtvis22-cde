@@ -72,10 +72,7 @@ Dominik Wolf</p></li>
         <div class="well toc">
 
         <ul>
-        <li><a href="#climate-difference-explorer"
-        id="toc-climate-difference-explorer">Climate Difference
-        Explorer</a>
-        <ul>
+        <li><a href="#about" id="toc-about">About</a></li>
         <li><a href="#data-source" id="toc-data-source">Data
         Source</a></li>
         <li><a href="#data-preprocessing"
@@ -93,9 +90,9 @@ Dominik Wolf</p></li>
         <ul>
         <li><a href="#step-1-data-loading"
         id="toc-step-1-data-loading">Step 1: Data Loading</a></li>
-        <li><a href="#step-2-data-aggregation"
-        id="toc-step-2-data-aggregation">Step 2: Data
-        Aggregation</a></li>
+        <li><a href="#step-2-grid-creation-and-data-aggregation"
+        id="toc-step-2-grid-creation-and-data-aggregation">Step 2: Grid
+        Creation and Data Aggregation</a></li>
         <li><a href="#step-3-data-rendering"
         id="toc-step-3-data-rendering">Step 3: Data Rendering</a></li>
         </ul></li>
@@ -105,7 +102,35 @@ Dominik Wolf</p></li>
         <li><a href="#visualization-1"
         id="toc-visualization-1">Visualization</a></li>
         <li><a href="#configuration-window"
-        id="toc-configuration-window">Configuration Window</a></li>
+        id="toc-configuration-window">Configuration Window</a>
+        <ul>
+        <li><a href="#time-selection" id="toc-time-selection">Time
+        Selection</a></li>
+        <li><a href="#grid-settings" id="toc-grid-settings">Grid
+        Settings</a></li>
+        <li><a href="#color-settings" id="toc-color-settings">Color
+        Settings</a></li>
+        </ul></li>
+        <li><a href="#information-window"
+        id="toc-information-window">Information Window</a>
+        <ul>
+        <li><a href="#general" id="toc-general">General</a></li>
+        <li><a href="#help" id="toc-help">Help</a></li>
+        </ul></li>
+        </ul></li>
+        <li><a href="#developing-notes"
+        id="toc-developing-notes">Developing Notes</a>
+        <ul>
+        <li><a href="#getting-the-source-code"
+        id="toc-getting-the-source-code">Getting the source
+        code</a></li>
+        <li><a href="#setting-up-developing-environment"
+        id="toc-setting-up-developing-environment">Setting up developing
+        environment</a>
+        <ul>
+        <li><a href="#note-on-working-with-visual-studio-code"
+        id="toc-note-on-working-with-visual-studio-code">Note on working
+        with Visual Studio Code</a></li>
         </ul></li>
         </ul></li>
         </ul>
@@ -115,14 +140,13 @@ Dominik Wolf</p></li>
             <div class="span9">
 
       
-      <h1 id="climate-difference-explorer">Climate Difference
-Explorer</h1>
+      <h1 id="about">About</h1>
 <p>The Climate Difference Explorer is an interactive web application
 that enables users to investigate variations in temperature across two
 specified time ranges. This application is developed using TypeScript
 and utilizes WebGPU to provide efficient and performant
 visualizations.</p>
-<h2 id="data-source">Data Source</h2>
+<h1 id="data-source">Data Source</h1>
 <p>The application uses the <a
 href="https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data"><em>Climate
 Change: Earth Surface Temperature Data</em></a> dataset, sourced from <a
@@ -133,7 +157,7 @@ tool utilizes the <em>Global Land Temperatures By City</em> data, which
 includes monthly temperature averages for various cities, as well as
 geographical coordinates (latitude and longitude) to enable data
 aggregation and visualization.</p>
-<h2 id="data-preprocessing">Data Preprocessing</h2>
+<h1 id="data-preprocessing">Data Preprocessing</h1>
 <p>The Climate Difference Explorer uses a custom offline data processing
 pipeline to convert the raw CSV data into a format that is more suitable
 for the visualization. Furthermore, the pipeline also performs data
@@ -141,46 +165,61 @@ compression to reduce the size of the data file, which is served to the
 client. The pipeline is implemented in Python and the resulting file is
 served to the client together with the application.</p>
 <p>The preprocessing pipeline performs the following steps:</p>
-<h3 id="step-1-data-interpolation">Step 1: Data Interpolation</h3>
+<h2 id="step-1-data-interpolation">Step 1: Data Interpolation</h2>
 <p>The first step in the pipeline is to interpolate the data to fill in
 missing average temperature values via linear regression. The
 interpolation is performed on a per-city and per-month basis, and is
 done by first computing a linear regression model utilizing existing
 values, and then using the model to predict the missing temperature
 values.</p>
-<h3 id="step-2-data-compression">Step 2: Data Compression</h3>
-<p>The second step in the pipeline is to compress the data by
-discretizing the temperature values, coordinates, and coordinates. The
-resulting data is then stored in a binary LZMA (<a
+<h2 id="step-2-data-compression">Step 2: Data Compression</h2>
+<p>The second step in the pipeline is to compress the data with the
+following steps:</p>
+<ul>
+<li>Getting rid of unnecessary data (like city names and countries)</li>
+<li>Creation of a lookuptable for the different positions inside the
+dataset</li>
+<li>Saving dates as month difference to the first date in the
+database</li>
+<li>Converting numbers into the smallest binary representation
+possible</li>
+<li>Discretizing temperature values.</li>
+</ul>
+<p>The resulting data is then stored in a binary LZMA (<a
 href="https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm">Lempel-Ziv-Markov
 chain algorithm</a>) compressed format, which is more compact than the
 original CSV format. This is done to reduce the size of the data file,
-which is served to the client.</p>
-<h2 id="visualization">Visualization</h2>
+which is served to the client. By the just described steps we achieved
+an overall compression rate of 98,61% (for 2 byte discretization) or
+99,41% (for 1 byte discretization)</p>
+<h1 id="visualization">Visualization</h1>
 <p>A custom visualization is implemented using TypeScript and WebGPU to
 provide efficient and performant rendering. The code is transpiled to
 JavaScript and executed in the client browser.</p>
 <p>The steps of the visualization pipeline are as follows:</p>
-<h3 id="step-1-data-loading">Step 1: Data Loading</h3>
+<h2 id="step-1-data-loading">Step 1: Data Loading</h2>
 <p>In the first step, the compressed data file is loaded into memory and
 decompressed in the client browser by reversing the process described in
 the <em>Data Preprocessing</em> section. The decompressed data is then
-transferred to the GPU using a WebGPU buffer.</p>
-<h3 id="step-2-data-aggregation">Step 2: Data Aggregation</h3>
-<p>The second step involves aggregating the data into a grid of
-hexagonal cells. This is done by using a WebGPU compute shader, which
-sums the temperature values within each cell for both time ranges to be
-compared, and then calculates the average temperature for each cell by
-dividing the sums by the number of data points. A second compute shader
-then finds the minimum and maximum values for the entire grid, which are
-used to determine the color shading of the grid cells.</p>
-<h3 id="step-3-data-rendering">Step 3: Data Rendering</h3>
+transferred to the GPU utilizing WebGPU buffer.</p>
+<h2 id="step-2-grid-creation-and-data-aggregation">Step 2: Grid Creation
+and Data Aggregation</h2>
+<p>The second step involves creating a hexagonal grid and aggregat the
+data into its cells. This is done by using a WebGPU compute shader,
+which sums the temperature values within each cell for both time ranges
+to be compared, and then calculates the average temperature for each
+cell by dividing the sums by the number of summed data points. A second
+compute shader then finds the minimum and maximum values for the entire
+grid, which are used to determine the color shading of the grid
+cells.</p>
+<h2 id="step-3-data-rendering">Step 3: Data Rendering</h2>
 <p>In the final step, a world map is rendered on the canvas. The
 hexagonal grid cells are then overlaid on the map and shaded according
 to the calculated temperature difference values. The resulting
 visualization provides a representation of the data that allows to
-quickly see trends in the temperature differences.</p>
-<h2 id="user-interface">User Interface</h2>
+quickly see temperature differences in various areas around the
+world.</p>
+<h1 id="user-interface">User Interface</h1>
 <p>Since the WebGPU standard is still in its early stages of
 development, the application can currently only be used on the latest
 version of Google Chrome Canary.</p>
@@ -199,7 +238,7 @@ year ranges to compare and adjust various display options.</li>
 currently displayed data, technical information, and a brief help
 guide.</li>
 </ol>
-<h3 id="visualization-1">Visualization</h3>
+<h2 id="visualization-1">Visualization</h2>
 <p>The visualization groups the underlying data into hexagonal bins,
 each of which represents a specific geographic area. Data points within
 each bin are aggregated into a single value, which is then represented
@@ -214,25 +253,113 @@ information about the bin is displayed as a tooltip. This information
 includes, among others, the grid coordinates of the bin and the exact
 value of the aggregated data points within the bin.</p>
 <p><img src="images/hover.png" /></p>
-<h3 id="configuration-window">Configuration Window</h3>
+<h2 id="configuration-window">Configuration Window</h2>
 <p>The configuration window is organized into three sections:</p>
 <ol type="1">
-<li>The <strong>Time Selection</strong> section allows to select the
+<li>The <strong>time selection</strong> section allows to select the
 date ranges for comparison.</li>
-<li>The <strong>Grid Settings</strong> section provides options for
+<li>The <strong>grid settings</strong> section provides options for
 configuring the hexagonal grid in the visualization.</li>
-<li>The <strong>Color Settings</strong> section allows to adjust the
+<li>The <strong>color settings</strong> section allows to adjust the
 colors used in the visualization.</li>
 </ol>
-<h4 id="time-selection">Time Selection</h4>
-<p>The Time Selection section enables users to select two year ranges
-for comparison. Users can select the start and end years for Time Range
-A and Time Range B using sliders. Additionally, a drop-down menu allows
-users to choose whether to compare the average temperature values for
-the entire year or for a specific month.</p>
+<h3 id="time-selection">Time Selection</h3>
+<p>The time selection section enables users to select two year ranges
+for comparison. Users can select the start and end years for <em>Time
+Range A</em> and <em>Time Range B</em> using sliders. Additionally, a
+drop-down menu allows users to choose whether to compare the average
+temperature values for the entire year or for a specific month.</p>
 <p><img src="images/configuration-time.png" /></p>
-<h4 id="grid-settings">Grid Settings</h4>
+<h3 id="grid-settings">Grid Settings</h3>
+<p>The grid settings section of the configuration window allows to
+customize the hexagonal grid displayed in the visualization. The section
+includes sliders for adjusting the <em>Grid Scale</em>, which refers to
+the size of the individual hexagons of the grid, and <em>Grid
+Border</em>, which refers to the thickness of the border around each
+hexagon. Additionally, users can toggle on or off the equidistant grid
+option, which ensures that all sides of the hexagons have the same
+length. When the option is deselected, the hexagons will be distorted to
+match the aspect ratio of the underlying world map.</p>
+<p>The <em>Grid Scale</em> and <em>Grid Border</em> settings affect the
+coverage of the hexagons on the world map, so when these settings are
+adjusted, the aggregation of the data points will be recalculated.</p>
 <p><img src="images/configuration-grid.png" /></p>
+<h3 id="color-settings">Color Settings</h3>
+<p>The color settings section allows users to switch between a
+sequential or a diverging color map using a drop-down menu. Sequential
+color maps use a progression of colors between two colors, while
+diverging color maps use two different colors that progress through a
+neutral color in the middle. Users can select the start and end colors
+of the gradient for both types of color maps using a color picker.
+Additionally, when using a diverging color map, users can also select
+the neutral color in the middle. The section also offers the option to
+use a symmetric variant for both color maps, which shows the same range
+of values at both ends of the scale. In addition, this section provides
+an option to customize the colors of the empty hexagons and the world
+map background.</p>
+<p><img src="images/configuration-color.png" /></p>
+<p><img src="images/visualization-color-maps.png" /></p>
+<h2 id="information-window">Information Window</h2>
+<p>The information window is organized into two sections:</p>
+<ol type="1">
+<li>The <strong>general</strong> section that displays information about
+the data currently being visualized.</li>
+<li>The <strong>help</strong> section that offers a brief introduction
+to the application and its features.</li>
+</ol>
+<h3 id="general">General</h3>
+<p>This section displays statistical values about the visualized data,
+which include:</p>
+<ul>
+<li><strong>Visualization</strong>
+<ol type="1">
+<li><em>Maximum</em>, <em>Minimum</em>, and <em>Average</em>: The
+highest, lowest, and average value of the data points within the entire
+grid.</li>
+<li><em>N_total</em>: The total number of data points currently
+aggregated.</li>
+</ol></li>
+<li><strong>Compute Times</strong>
+<ol type="1">
+<li><em>Aggregate</em> and <em>Averaging</em>: Time taken by the compute
+shader to process the data.</li>
+<li><em>Rendering</em>: Time taken for rendering the map and grid.</li>
+<li><em>WriteBack</em>: Time taken for writing the aggregated data back
+to the main memory for client access.</li>
+</ol></li>
+</ul>
+<p><img src="images/information-general.png" /></p>
+<h3 id="help">Help</h3>
+<p>This section offers a brief overview of the application, including
+its features, data sources, and useful keyboard shortcuts.</p>
+<p><img src="images/information-help.png" /></p>
+<h1 id="developing-notes">Developing Notes</h1>
+<h2 id="getting-the-source-code">Getting the source code</h2>
+<p>You can get the source code of the Climate Difference Explorer from
+our <a
+href="https://github.com/GeraldKimmersdorfer/rtvis22-cde">github-page</a>.</p>
+<pre><code>git clone https://github.com/GeraldKimmersdorfer/rtvis22-cde.git</code></pre>
+<h2 id="setting-up-developing-environment">Setting up developing
+environment</h2>
+<p>The application is developed using the <code>npm</code>-Manager, so
+before you can start coding you need to install <a
+href="https://nodejs.org/en/">Node.js</a>. To download the required
+packages execute the following command:</p>
+<pre><code>npm install </code></pre>
+<p>That should be it. You can build the application by executing:</p>
+<pre><code>npm run dev</code></pre>
+<p>To generate a production build you may use <code>npm run prod</code>.
+If you wanna have hot-reload of your typescript and shader-files aswell
+as the webpack developing server you want to run:</p>
+<pre><code>npm run serve</code></pre>
+<h3 id="note-on-working-with-visual-studio-code">Note on working with
+Visual Studio Code</h3>
+<p>I advice to use the <a
+href="https://marketplace.visualstudio.com/items?itemName=PolyMeilex.wgsl">WGSL</a>-plugin
+for Code-Highlighting in Shader-Files. If you, for whatever reason don’t
+want to work with the webpack server you can use the <a
+href="https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer">Live
+Server</a>-plugin.</p>
             </div>
     </div>
   </div>
