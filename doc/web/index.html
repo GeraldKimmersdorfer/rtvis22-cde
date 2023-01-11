@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Climate Difference Explorer</title>
+  <link rel="stylesheet" href="./style.css">
+  <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css" rel="stylesheet" />
+
+</head>
+<body>
+<head>
+    <title>Parallax Scrolling Website</title>
+</head>
+<body>
+    <header id="header">
+        <a href="#" class="logo"></a>
+        <ul>
+            <li><a href="#" class="active">Home</a></li>
+            <li><a id="butAbout">About</a></li>
+        </ul>
+    </header>
+    
+    <Section>
+        <h2 id="text">Climate Difference Explorer<br><div>by Gerald Kimmersdorfer and Dominik Wolf</div></h2>
+        
+        <img src="img/bird1.png" id="bird1">
+        <img src="img/bird2.png" id="bird2">
+        <img src="img/forest_burn.png" id="forest">
+        
+        <a href="https://cde.roshpit.at/" id="btn" class="btn">Start exploring</a>
+        
+        <img src="img/rocks.png" id="rocks">
+        <img src="img/water.png" id="water">
+    </Section>
+    
+    <div class="sec">
+        <img src="img/scr1.png" style="float:right; width: 40%; margin-top: 6em;"  /> <h2 id="secAbout">About</h2>
+        
+        <p>The Climatic Difference Explorer lets you compare aggregated temperature values over two different periods of time.
+            <a href="https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data">The database</a> comes from the <a href="https://berkeleyearth.org/data/">Berkley Earth Organization</a> and encompasses more than 8 Millionen individual measurements.</p><p>
+            WebGPUs Compute Shader are used to accumulate and rasterize this data in realtime. Additionally a classical rendering pipeline is used to draw the graph and the world map.</p>
+            <p>The tool was written by Gerald Kimmersdorfer and Dominik Wolf for the course <b>Real-Time Visualization</b> in the winter semester 2023.</p>
+            
+            <br style="clear:both;">
+                <div style="text-align: center; margin: 30px 0 30px 0;">
+                    <a class="btn" href="https://cde.roshpit.at/"><span class="mdi mdi-earth"></span> Start exploring</a>
+                    <a class="btn" href="https://cde.roshpit.at/"><span class="mdi mdi-file-document"></span> Documentation</a>
+                    <a class="btn" href="https://github.com/GeraldKimmersdorfer/rtvis22-cde"><span class="mdi mdi-github"></span> Visit us on Github</a>
+                </div>
+
+                <p><i>* Since WebGPU is not yet standartized and implemented in all common browsers you might need <a href="https://www.google.com/intl/de/chrome/canary/">Chrome Canary</a> in
+                    order for it to run. (As of January 23) </i></p>
+            
+        
+            <div style="width:1px; height:200px;"></div>
+            
+    </div>
+
+    <div id="footer" class="sec">
+        <p>
+            Thanks to Robert Gil Baptista for your <a href="https://codepen.io/robertgbaptista/pen/jOZGEWX" target="_blank">Forest Landing Page</a>-design and bgrfx for the Forest Graphics (from <a href="https://www.freepik.com/" target="_blank">Freepik</a>)
+        </p>
+    </div>
+
+    
+</body>
+<!-- partial -->
+<script src="jquery-3.6.3.min.js"></script>
+
+    
+<script>
+    let text = document.getElementById('text');
+    let bird1 = document.getElementById('bird1');
+    let bird2 = document.getElementById('bird2');
+    let btn = document.getElementById('btn');
+    let rocks = document.getElementById('rocks');
+    let forest = document.getElementById('forest');
+    let water = document.getElementById('water');
+    let header = document.getElementById('header');
+    
+    function scrollCallback() {
+        let value = window.scrollY;
+        
+        text.style.top = 45 + value * -.03 + '%';
+        bird2.style.top = -20 + value * -1.0 + 'px';
+        bird2.style.left = value * 0.4 + 'px';
+        bird1.style.top = value * -0.3 + 'px';
+        bird1.style.left = value * -1 + 'px';
+        btn.style.marginTop = value * 0.4 + 'px';
+        rocks.style.top = value * -.12 + 'px';
+        forest.style.top = value * .25 + 'px';
+        header.style.top = value * .5 + 'px';
+    }
+
+    $("#butAbout").click(function() {
+        $([document.documentElement, document.body]).animate({
+            scrollTop: $("#secAbout").offset().top
+        }, 1000);
+    });
+
+    window.addEventListener('scroll', scrollCallback);
+    scrollCallback();
+    
+</script>
+
+</body>
+</html>
