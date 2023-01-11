@@ -36,6 +36,10 @@ module.exports = {
                 loader: 'ts-shader-loader'
             },
             {
+                test: /\.(geo)?json$/,
+                loader: 'json-loader'
+            },
+            {
                 test: /\.(png|lzma|woff2|jpg)$/i,
                 type: 'asset/resource'
             }

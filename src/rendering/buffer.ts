@@ -45,6 +45,7 @@ export class UniformBuffer {
     colorB: Vec4_f32 = { x_f32: 1.0, y_f32: 1.0, z_f32: 1.0, w_f32: 0.5 };
     colorC: Vec4_f32 = { x_f32: 178.0/255.0, y_f32: 24.0/255.0, z_f32: 43.0/255.0, w_f32: 0.9 };
     colorNull: Vec4_f32 = { x_f32: 1.0, y_f32: 1.0, z_f32: 1.0, w_f32: 0.05 };
+    colorMap: Vec4_f32 = { x_f32: 160.0/255.0, y_f32: 169.0/255.0, z_f32: 174.0/255.0, w_f32: 1.0 };
 
     hoverIndex_i32: number = 0;
     buffer3: Vec3_u32 = {x_u32:0,y_u32:0,z_u32:0};
@@ -80,14 +81,14 @@ export class UniformBuffer {
     determine_hover_cell(scrx: number, scry: number):{col:number, row:number, i:number} {
         var x = scrx / this.screenSize.x_u32;
         var y = 1.0 - (scry / this.screenSize.y_u32);
-        
+
         var r = Math.floor(y * (this.gridResolution.y_u32 - 1));
         var q = x * (this.gridResolution.x_u32 - 1);
         if (r % 2 == 1) {
             q += this.gridProperties.hs / 2.0
         }
         var q = Math.floor(q);
-        
+
         this.hoverIndex_i32 = r * this.gridResolution.x_u32 + q;
         return {col: q, row: r, i:this.hoverIndex_i32};
     }
@@ -150,7 +151,7 @@ interface GridEntry {
 export class GridBuffer {
 
     data:GridEntry[] = [];
-    
+
     constructor() {
     }
 
@@ -159,7 +160,7 @@ export class GridBuffer {
         this.data = [];
         for (var i = 0; i < buff.byteLength / 4 / 4; i++) {
             this.data.push({
-                mPoint: { 
+                mPoint: {
                     x: dvGridReadBuffer.getFloat32(i*16, true),
                     y: dvGridReadBuffer.getFloat32(i*16+4, true)
                 },

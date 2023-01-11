@@ -22,14 +22,19 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@mapbox/geojson-coords": "^0.0.2",
+    "@turf/boolean-point-in-polygon": "^6.5.0",
     "@types/jquery.colorpicker": "^1.4.35",
+    "d3-delaunay": "^6.0.2",
     "jquery": "^3.6.1",
     "jquery-ui": "^1.13.2",
+    "json-loader": "^0.5.7",
     "lzma": "^2.3.2",
     "material-symbols": "^0.4.1",
     "vanderlee-colorpicker": "^1.2.16"
   },
   "devDependencies": {
+    "@types/d3-delaunay": "^6.0.1",
     "@types/jquery": "^3.5.14",
     "@types/jqueryui": "^1.12.16",
     "@types/node": "^18.11.9",

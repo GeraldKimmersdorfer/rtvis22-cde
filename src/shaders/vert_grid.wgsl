@@ -4,9 +4,9 @@ struct Output {
 };
 
 struct Uniforms {
-	gridProperties: vec4<f32>,		// hexagon size, vertical space, horizontal space, border
-    screenSize: vec2<u32>,			// the size of the viewport
-    gridResolution: vec2<u32>,		// resolution of the grid
+	gridProperties: vec4<f32>,      // hexagon size, vertical space, horizontal space, border
+    screenSize: vec2<u32>,          // the size of the viewport
+    gridResolution: vec2<u32>,      // resolution of the grid
 
     timeRangeBounds: vec4<u32>,     // contains TimeAMin, TimeAMax, TimeBMin, TimeBMax already in the appropriate dm
     monthComparison: i32,           // which month to compare (-1... whole year, 0...January, ...)
@@ -17,9 +17,10 @@ struct Uniforms {
     colorA: vec4<f32>,              // color for min values
     colorB: vec4<f32>,              // color for 0 (if diverging)
     colorC: vec4<f32>,              // color for max values
-    colorNull: vec4<f32>,            // color for empty cell
+    colorNull: vec4<f32>,           // color for empty cell
+    colorMap: vec4<f32>,            // color of the map
 
-    hoverIndex: i32                 // contains the id of the active grid cell
+    hoverIndex: i32,                // contains the id of the active grid cell
 };
 
 struct GridEntry {
@@ -58,7 +59,7 @@ fn compute_hash(b: u32) -> u32
     a = (a+0xfd7046c5) + (a<<3); a = (a^0xb55a4f09) ^ (a>>16); return a;
 }
 
-fn color_from_id_hash(a: u32) -> vec3<f32> 
+fn color_from_id_hash(a: u32) -> vec3<f32>
 {
     let hash:u32 = compute_hash(a);
     return vec3<f32>(f32(hash & 255), f32((hash >> 8) & 255), f32((hash >> 16) & 255)) / 255.0;
@@ -77,7 +78,7 @@ fn color_from_val(val: f32) -> vec4<f32>
             let p:f32 = abs(val) / abs(minmaxvalues.r);
             return mix(uniforms.colorB, uniforms.colorA, p);
         }
-    } 
+    }
 }
 
 @vertex
@@ -112,8 +113,8 @@ fn vs_main(
         output.vColor.a *= 0.8;
     }
     if (uniforms.hoverIndex == i32(instanceIndex)) {
-        output.vColor.a = output.vColor.a * 1.5 + 0.1;        
+        output.vColor.a = output.vColor.a * 1.5 + 0.1;
     }
-    
+
     return output;
 }

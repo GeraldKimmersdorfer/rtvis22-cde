@@ -142,7 +142,7 @@ export const InitUserInterface = () => {
         if (end > DB.bounds_date.max) end = DB.bounds_date.max;
         renderer.uniformBuffer.timeRangeBounds.z_u32 = getMonthDifference(DB.bounds_date.min, start);
         renderer.uniformBuffer.timeRangeBounds.w_u32 = getMonthDifference(DB.bounds_date.min, end);
-        
+
         $( "#lbl-trb" ).html(ui.values[ 0 ] + " - " + ui.values[ 1 ] );
       }
     }).on("slidestop", (e:any, ui:any) => {
@@ -205,7 +205,7 @@ export const InitUserInterface = () => {
         renderer.uniformBuffer.colorB = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
         renderer.renderFrame(false, false, true);
       }
-    });    
+    });
     $("#cp-colc").colorpicker({
       alpha: true,
       colorFormat: "RGBA",
@@ -219,6 +219,14 @@ export const InitUserInterface = () => {
       colorFormat: "RGBA",
       select: (event:any, data:any) => {
         renderer.uniformBuffer.colorNull = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
+        renderer.renderFrame(false, false, true);
+      }
+    });
+    $("#cp-colmap").colorpicker({
+      alpha: true,
+      colorFormat: "RGBA",
+      select: (event:any, data:any) => {
+        renderer.uniformBuffer.colorMap = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
         renderer.renderFrame(false, false, true);
       }
     });
@@ -247,7 +255,7 @@ export const InitUserInterface = () => {
           $("#lbl-curcoord").html(hc.col.toFixed(0) + " | " + hc.row.toFixed(0) + " (" + hc.i + ")");
         }
       }, 1);
-      
+
     }).mouseleave(() => {
       setTimeout(() => {
         renderer.uniformBuffer.hoverIndex_i32 = -1;
@@ -285,11 +293,11 @@ export const hideFooter = () => {
 }
 
 export const showMainMenu = () => {
-    $( "#mainMenu" ).dialog( "open" );  
+    $( "#mainMenu" ).dialog( "open" );
 }
 
 export const hideMainMenu = () => {
-  $( "#mainMenu" ).dialog( "close" );  
+  $( "#mainMenu" ).dialog( "close" );
 }
 
 export const showInfoMenu = () => {
