@@ -1,0 +1,242 @@
+<!doctype html>
+<html >
+<head>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!--[if lt IE 9]>
+                <script src="http://css3-mediaqueries-js.googlecode.com/svn/trunk/css3-mediaqueries.js"></script>
+        <![endif]-->
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+
+    <!-- <link rel="stylesheet" type="text/css" href="template.css" /> -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/template.css" />
+
+    <link href="https://vjs.zencdn.net/5.4.4/video-js.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+    <!-- <script type='text/javascript' src='menu/js/jquery.cookie.js'></script> -->
+    <!-- <script type='text/javascript' src='menu/js/jquery.hoverIntent.minified.js'></script> -->
+    <!-- <script type='text/javascript' src='menu/js/jquery.dcjqaccordion.2.7.min.js'></script> -->
+
+    <!-- <link href="menu/css/skins/blue.css" rel="stylesheet" type="text/css" /> -->
+    <!-- <link href="menu/css/skins/graphite.css" rel="stylesheet" type="text/css" /> -->
+    <!-- <link href="menu/css/skins/grey.css" rel="stylesheet" type="text/css" /> -->
+  
+    <!-- <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+        
+  
+    <!-- <script src="script.js"></script> -->
+  
+    <!-- <script src="jquery.sticky-kit.js "></script> -->
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.cookie.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.hoverIntent.minified.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.dcjqaccordion.2.7.min.js'></script>
+
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/blue.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/graphite.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/grey.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/ryangrose/easy-pandoc-templates@948e28e5/css/elegant_bootstrap.css" rel="stylesheet" type="text/css" />
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
+  
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
+    <meta name="generator" content="pandoc" />
+  <meta name="author" content="Gerald Kimmersdorfer, Dominik Wolf" />
+  <meta name="date" content="2023-01-11" />
+  <title>Climate Difference Explorer - Documentation</title>
+  <style type="text/css">code{white-space: pre;}</style>
+</head>
+<body>
+
+    
+    <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <span class="doc-title">Climate Difference Explorer -
+Documentation</span>
+        <ul class="nav pull-right doc-info">
+                    <li><p class="navbar-text">Gerald Kimmersdorfer,
+Dominik Wolf</p></li>
+                              <li><p class="navbar-text">January 11,
+2023</p></li>
+                  </ul>
+      </div>
+    </div>
+  </div>
+    <div class="container">
+    <div class="row">
+            <div id="TOC" class="span3">
+        <div class="well toc">
+
+        <ul>
+        <li><a href="#climate-difference-explorer"
+        id="toc-climate-difference-explorer">Climate Difference
+        Explorer</a>
+        <ul>
+        <li><a href="#data-source" id="toc-data-source">Data
+        Source</a></li>
+        <li><a href="#data-preprocessing"
+        id="toc-data-preprocessing">Data Preprocessing</a>
+        <ul>
+        <li><a href="#step-1-data-interpolation"
+        id="toc-step-1-data-interpolation">Step 1: Data
+        Interpolation</a></li>
+        <li><a href="#step-2-data-compression"
+        id="toc-step-2-data-compression">Step 2: Data
+        Compression</a></li>
+        </ul></li>
+        <li><a href="#visualization"
+        id="toc-visualization">Visualization</a>
+        <ul>
+        <li><a href="#step-1-data-loading"
+        id="toc-step-1-data-loading">Step 1: Data Loading</a></li>
+        <li><a href="#step-2-data-aggregation"
+        id="toc-step-2-data-aggregation">Step 2: Data
+        Aggregation</a></li>
+        <li><a href="#step-3-data-rendering"
+        id="toc-step-3-data-rendering">Step 3: Data Rendering</a></li>
+        </ul></li>
+        <li><a href="#user-interface" id="toc-user-interface">User
+        Interface</a>
+        <ul>
+        <li><a href="#visualization-1"
+        id="toc-visualization-1">Visualization</a></li>
+        <li><a href="#configuration-window"
+        id="toc-configuration-window">Configuration Window</a></li>
+        </ul></li>
+        </ul></li>
+        </ul>
+
+        </div>
+      </div>
+            <div class="span9">
+
+      
+      <h1 id="climate-difference-explorer">Climate Difference
+Explorer</h1>
+<p>The Climate Difference Explorer is an interactive web application
+that enables users to investigate variations in temperature across two
+specified time ranges. This application is developed using TypeScript
+and utilizes WebGPU to provide efficient and performant
+visualizations.</p>
+<h2 id="data-source">Data Source</h2>
+<p>The application uses the <a
+href="https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data"><em>Climate
+Change: Earth Surface Temperature Data</em></a> dataset, sourced from <a
+href="http://berkeleyearth.org/about/">Berkeley Earth</a>. This dataset
+includes historical average land temperatures dating back to 1750 and
+extending up to 2013, and is provided in CSV format. Specifically, the
+tool utilizes the <em>Global Land Temperatures By City</em> data, which
+includes monthly temperature averages for various cities, as well as
+geographical coordinates (latitude and longitude) to enable data
+aggregation and visualization.</p>
+<h2 id="data-preprocessing">Data Preprocessing</h2>
+<p>The Climate Difference Explorer uses a custom offline data processing
+pipeline to convert the raw CSV data into a format that is more suitable
+for the visualization. Furthermore, the pipeline also performs data
+compression to reduce the size of the data file, which is served to the
+client. The pipeline is implemented in Python and the resulting file is
+served to the client together with the application.</p>
+<p>The preprocessing pipeline performs the following steps:</p>
+<h3 id="step-1-data-interpolation">Step 1: Data Interpolation</h3>
+<p>The first step in the pipeline is to interpolate the data to fill in
+missing average temperature values via linear regression. The
+interpolation is performed on a per-city and per-month basis, and is
+done by first computing a linear regression model utilizing existing
+values, and then using the model to predict the missing temperature
+values.</p>
+<h3 id="step-2-data-compression">Step 2: Data Compression</h3>
+<p>The second step in the pipeline is to compress the data by
+discretizing the temperature values, coordinates, and coordinates. The
+resulting data is then stored in a binary LZMA (<a
+href="https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm">Lempel-Ziv-Markov
+chain algorithm</a>) compressed format, which is more compact than the
+original CSV format. This is done to reduce the size of the data file,
+which is served to the client.</p>
+<h2 id="visualization">Visualization</h2>
+<p>A custom visualization is implemented using TypeScript and WebGPU to
+provide efficient and performant rendering. The code is transpiled to
+JavaScript and executed in the client browser.</p>
+<p>The steps of the visualization pipeline are as follows:</p>
+<h3 id="step-1-data-loading">Step 1: Data Loading</h3>
+<p>In the first step, the compressed data file is loaded into memory and
+decompressed in the client browser by reversing the process described in
+the <em>Data Preprocessing</em> section. The decompressed data is then
+transferred to the GPU using a WebGPU buffer.</p>
+<h3 id="step-2-data-aggregation">Step 2: Data Aggregation</h3>
+<p>The second step involves aggregating the data into a grid of
+hexagonal cells. This is done by using a WebGPU compute shader, which
+sums the temperature values within each cell for both time ranges to be
+compared, and then calculates the average temperature for each cell by
+dividing the sums by the number of data points. A second compute shader
+then finds the minimum and maximum values for the entire grid, which are
+used to determine the color shading of the grid cells.</p>
+<h3 id="step-3-data-rendering">Step 3: Data Rendering</h3>
+<p>In the final step, a world map is rendered on the canvas. The
+hexagonal grid cells are then overlaid on the map and shaded according
+to the calculated temperature difference values. The resulting
+visualization provides a representation of the data that allows to
+quickly see trends in the temperature differences.</p>
+<h2 id="user-interface">User Interface</h2>
+<p>Since the WebGPU standard is still in its early stages of
+development, the application can currently only be used on the latest
+version of Google Chrome Canary.</p>
+<p>After opening the application in the browser, the data is loaded and
+unpacked.</p>
+<p><img src="images/loading.png" /></p>
+<p>Once finished, the visualization is rendered on the canvas. The
+application is divided into three sections:</p>
+<ol type="1">
+<li>The <strong>visualization</strong>, which encompasses the entire
+screen and includes a legend, displays the selected data on a world
+map.</li>
+<li>The <strong>configuration window</strong> allows users to select the
+year ranges to compare and adjust various display options.</li>
+<li>The <strong>information window</strong> provides an overview of the
+currently displayed data, technical information, and a brief help
+guide.</li>
+</ol>
+<h3 id="visualization-1">Visualization</h3>
+<p>The visualization groups the underlying data into hexagonal bins,
+each of which represents a specific geographic area. Data points within
+each bin are aggregated into a single value, which is then represented
+by the color of the hexagon. The color of the hexagon indicates the
+change in the average temperature by comparing the selected year ranges.
+The legend, which provides context for the colors used in the hexagons,
+is displayed at the bottom of the visualization. If a bin has no data
+points, it will appear transparent by default.</p>
+<p><img src="images/start.png" /></p>
+<p>When the mouse cursor is placed over a hexagon, additional
+information about the bin is displayed as a tooltip. This information
+includes, among others, the grid coordinates of the bin and the exact
+value of the aggregated data points within the bin.</p>
+<p><img src="images/hover.png" /></p>
+<h3 id="configuration-window">Configuration Window</h3>
+<p>The configuration window is organized into three sections:</p>
+<ol type="1">
+<li>The <strong>Time Selection</strong> section allows to select the
+date ranges for comparison.</li>
+<li>The <strong>Grid Settings</strong> section provides options for
+configuring the hexagonal grid in the visualization.</li>
+<li>The <strong>Color Settings</strong> section allows to adjust the
+colors used in the visualization.</li>
+</ol>
+<h4 id="time-selection">Time Selection</h4>
+<p>The Time Selection section enables users to select two year ranges
+for comparison. Users can select the start and end years for Time Range
+A and Time Range B using sliders. Additionally, a drop-down menu allows
+users to choose whether to compare the average temperature values for
+the entire year or for a specific month.</p>
+<p><img src="images/configuration-time.png" /></p>
+<h4 id="grid-settings">Grid Settings</h4>
+<p><img src="images/configuration-grid.png" /></p>
+            </div>
+    </div>
+  </div>
+  <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
+
+</body>
+</html>
