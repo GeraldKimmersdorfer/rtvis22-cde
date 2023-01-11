@@ -118,6 +118,10 @@ p {
   padding: 0px 5px 0px 5px;
 }
 
+h4 {
+  margin-block-end: 0.5em;
+}
+
 .colorpicker {
   font-size: 10px !important;
   text-align: center;
