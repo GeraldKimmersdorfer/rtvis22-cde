@@ -42,3 +42,42 @@ In the final step, a world map is rendered on the canvas. The hexagonal grid cel
 
 Since the WebGPU standard is still in its early stages of development, the application can currently only be used on the latest version of Google Chrome Canary.
 
+After opening the application in the browser, the data is loaded and unpacked.
+
+![](images/loading.png)
+
+Once finished, the visualization is rendered on the canvas. The application is divided into three sections:
+
+1. The **visualization**, which encompasses the entire screen and includes a legend, displays the selected data on a world map.
+2. The **configuration window** allows users to select the year ranges to compare and adjust various display options.
+3. The **information window** provides an overview of the currently displayed data, technical information, and a brief help guide.
+
+### Visualization
+
+The visualization groups the underlying data into hexagonal bins, each of which represents a specific geographic area. Data points within each bin are aggregated into a single value, which is then represented by the color of the hexagon. The color of the hexagon indicates the change in the average temperature by comparing the selected year ranges. The legend, which provides context for the colors used in the hexagons, is displayed at the bottom of the visualization. If a bin has no data points, it will appear transparent by default.
+
+![](images/start.png)
+
+When the mouse cursor is placed over a hexagon, additional information about the bin is displayed as a tooltip. This information includes, among others, the grid coordinates of the bin and the exact value of the aggregated data points within the bin.
+
+![](images/hover.png)
+
+### Configuration Window
+
+The configuration window is organized into three sections:
+
+1. The **Time Selection** section allows to select the date ranges for comparison.
+2. The **Grid Settings** section provides options for configuring the hexagonal grid in the visualization.
+3. The **Color Settings** section allows to adjust the colors used in the visualization.
+
+#### Time Selection
+
+The Time Selection section enables users to select two year ranges for comparison. Users can select the start and end years for Time Range A and Time Range B using sliders. Additionally, a drop-down menu allows users to choose whether to compare the average temperature values for the entire year or for a specific month.
+
+![](images/configuration-time.png)
+
+#### Grid Settings
+
+
+
+![](images/configuration-grid.png)
