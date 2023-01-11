@@ -84,24 +84,17 @@
                 <label for="s-colormode" style="line-height: 200%;">Coloring Mode:</label>
                 <select name="s-colormode" id="s-colormode">
                     <option value=0>Sequential</option>
-                    <option value=1 selected>Diverging</option>
+                    <option value=1>Sequential Symmetrical</option>
+                    <option value=2>Diverging</option>
+                    <option value=3 selected>Diverging Symmetrical</option>
                 </select>
-                <p>Color A:</p>
-                <input type="text" id="cp-cola" value="rgba(33,102,172,0.8)" />
-
+                <p>Color A: <input type="text" class="colorpicker" id="cp-cola" data-uniname="colorA" value="rgba(33,102,172,0.8)" /></p>
                 <span id="cp-colb-group">
-                    <p>Color B:</p>
-                    <input type="text" id="cp-colb" value="rgba(255,255,255,0.5)" />
+                    <p>Color B: <input type="text" class="colorpicker" id="cp-colb" data-uniname="colorB" value="rgba(255,255,255,0.5)" /></p>
                 </span>
-
-                <p>Color C:</p>
-                <input type="text" id="cp-colc" value="rgba(178,24,43,0.8)" />
-
-                <p>Empty Color:</p>
-                <input type="text" id="cp-colnull" value="rgba(255,255,255,0.05)" />
-
-                <p>Map Color:</p>
-                <input type="text" id="cp-colmap" value="rgba(160,169,174,0.2)" />
+                <p>Color C: <input type="text" class="colorpicker" id="cp-colc" data-uniname="colorC" value="rgba(178,24,43,0.8)" /></p>
+                <p>Empty Color: <input type="text" class="colorpicker" id="cp-colnull" data-uniname="colorNull" value="rgba(255,255,255,0.05)" /></p>
+                <p>Map Color: <input type="text" class="colorpicker" id="cp-colmap" data-uniname="colorMap" value="rgba(160,169,174,0.2)" /></p>
             </div>
         </div>
 

@@ -67,18 +67,33 @@ fn color_from_id_hash(a: u32) -> vec3<f32>
 
 fn color_from_val(val: f32) -> vec4<f32>
 {
-    if (uniforms.colorMode == 0) {   // sequential
-        let p:f32 = (val - minmaxvalues.r) / minmaxvalues.b;
-        return mix(uniforms.colorA, uniforms.colorC, p);
-    } else {    // diverging
-        if (val > 0) {
-            let p:f32 = val / minmaxvalues.g;
-            return mix(uniforms.colorB, uniforms.colorC, p);
-        } else {
-            let p:f32 = abs(val) / abs(minmaxvalues.r);
-            return mix(uniforms.colorB, uniforms.colorA, p);
+    var ret:vec4<f32> = vec4<f32>(1.0);
+    var minVal = minmaxvalues.r;
+    var maxVal = minmaxvalues.g;
+    if (uniforms.colorMode == 1 || uniforms.colorMode == 3) {
+        // apply symmetry
+        if (minVal < 0 && maxVal > 0) {
+            if (-minVal > maxVal) {
+                maxVal = -minVal;
+            } else {
+                minVal = -maxVal;
+            }
         }
     }
+    var valDiff = maxVal - minVal;
+    if (uniforms.colorMode == 0 || uniforms.colorMode == 1) {   // sequential
+        let p:f32 = (val - minVal) / valDiff;
+        ret = mix(uniforms.colorA, uniforms.colorC, p);
+    } else if (uniforms.colorMode == 2 || uniforms.colorMode == 3) {    // diverging
+        if (val > 0) {
+            let p:f32 = val / maxVal;
+            ret = mix(uniforms.colorB, uniforms.colorC, p);
+        } else {
+            let p:f32 = abs(val) / abs(minVal);
+            ret = mix(uniforms.colorB, uniforms.colorA, p);
+        }
+    }
+    return ret;
 }
 
 @vertex

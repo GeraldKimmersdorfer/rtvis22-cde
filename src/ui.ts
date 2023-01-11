@@ -204,45 +204,19 @@ export const InitUserInterface = () => {
         renderer.renderFrame(false, false, true).then(refreshLegend);
       }
     });
-    $("#cp-cola").colorpicker({
+    $(".colorpicker").colorpicker({
       alpha: true,
       colorFormat: "RGBA",
       select: (event:any, data:any) => {
-        renderer.uniformBuffer.colorA = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
+        let $itm = $(event.target);
+        console.log($(event.target));
+        let ub:any = renderer.uniformBuffer;
+        ub[$itm.data("uniname")] = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
         renderer.renderFrame(false, false, true).then(refreshLegend);
+        $itm.css("background", colToString(ub[$itm.data("uniname")]));        
       }
-    });
-    $("#cp-colb").colorpicker({
-      alpha: true,
-      colorFormat: "RGBA",
-      select: (event:any, data:any) => {
-        renderer.uniformBuffer.colorB = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
-        renderer.renderFrame(false, false, true).then(refreshLegend);
-      }
-    });
-    $("#cp-colc").colorpicker({
-      alpha: true,
-      colorFormat: "RGBA",
-      select: (event:any, data:any) => {
-        renderer.uniformBuffer.colorC = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
-        renderer.renderFrame(false, false, true).then(refreshLegend);
-      }
-    });
-    $("#cp-colnull").colorpicker({
-      alpha: true,
-      colorFormat: "RGBA",
-      select: (event:any, data:any) => {
-        renderer.uniformBuffer.colorNull = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
-        renderer.renderFrame(false, false, true);
-      }
-    });
-    $("#cp-colmap").colorpicker({
-      alpha: true,
-      colorFormat: "RGBA",
-      select: (event:any, data:any) => {
-        renderer.uniformBuffer.colorMap = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
-        renderer.renderFrame(false, false, true);
-      }
+    }).each(function() {
+      $(this).css("background", $(this).attr("value") || "none");
     });
     ($("#cb-gaspect") as any).checkboxradio({
       icon: true
@@ -311,16 +285,25 @@ export const refreshGraphInformation = (buff:GridBuffer) => {
 
 export const refreshLegend = () => {
   let info = renderer.gridBuffer.get_stats();
-  if (renderer.uniformBuffer.colorMode_u32 == 1) { // diverging colors
-    var min = Math.min(info.min, 0.0);
-    var max = Math.max(info.max, 0.0);
-    $("#lbl-legmin").html(min.toFixed(2) + " °C");
-    $("#lbl-legmax").html(max.toFixed(2) + " °C");
+  var min = info.min;
+  var max = info.max;
+  if (renderer.uniformBuffer.colorMode_u32 == 1 || renderer.uniformBuffer.colorMode_u32 == 3) {
+    // Symmetrical:
+    if (min < 0 && max > 0) {
+      if (-min > max) max = -min;
+      else min = -max;
+    }
+  }
+  if (renderer.uniformBuffer.colorMode_u32 > 1) { // diverging colors
+    min = Math.min(min, 0.0);
+    max = Math.max(max, 0.0);
     let whitePos = (Math.abs(min) / (Math.abs(min) + max) * 100).toFixed(2);
     $("#b-leg").css("background", `linear-gradient(90deg, ${colToString(renderer.uniformBuffer.colorA)} 0%, ${colToString(renderer.uniformBuffer.colorB)} ${whitePos}%, ${colToString(renderer.uniformBuffer.colorC)} 100%)`);
   } else { // sequential
     $("#b-leg").css("background", `linear-gradient(90deg, ${colToString(renderer.uniformBuffer.colorA)} 0%, ${colToString(renderer.uniformBuffer.colorC)} 100%)`);
   }
+  $("#lbl-legmin").html(min.toFixed(2) + " °C");
+  $("#lbl-legmax").html(max.toFixed(2) + " °C");
 }
 
 export const showLegend = () => {

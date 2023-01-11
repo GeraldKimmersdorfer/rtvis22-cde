@@ -40,7 +40,7 @@ export class UniformBuffer {
     firstMonthIndex_i32: number = 11;
     gridAspect_u32: number = 1;
 
-    colorMode_u32: number = 1;
+    colorMode_u32: number = 3;
     colorA: Vec4_f32 = { x_f32: 33.0/255.0, y_f32: 102.0/255.0, z_f32: 172.0/255.0, w_f32: 0.9 };
     colorB: Vec4_f32 = { x_f32: 1.0, y_f32: 1.0, z_f32: 1.0, w_f32: 0.5 };
     colorC: Vec4_f32 = { x_f32: 178.0/255.0, y_f32: 24.0/255.0, z_f32: 43.0/255.0, w_f32: 0.9 };
