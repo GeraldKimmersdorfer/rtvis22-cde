@@ -29,7 +29,9 @@ const main = () => {
             renderer.renderFrame(false,false,false,true).then(() => {
                 ui.loadingDialogSuccess("We're all set and ready");
                 ui.showMainMenu();
+                ui.showInfoMenu();
                 ui.showCanvas();
+                ui.showLegend();
             });
         });
         

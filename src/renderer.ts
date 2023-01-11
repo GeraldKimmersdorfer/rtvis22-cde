@@ -199,6 +199,16 @@ const createPipelines = (format: GPUTextureFormat) => {
             entryPoint: "fs_main",
             targets: [{
                 format: format,
+                blend: {
+                    color: {
+                        srcFactor: 'src-alpha',
+                        dstFactor: 'one-minus-src-alpha'
+                    },
+                    alpha: {
+                        srcFactor: 'src-alpha',
+                        dstFactor: 'one-minus-src-alpha'
+                    }
+                }
             }]
         },
         primitive: {

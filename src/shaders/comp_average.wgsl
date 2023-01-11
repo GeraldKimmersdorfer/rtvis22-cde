@@ -38,12 +38,16 @@ fn cs_main(
     // Better way would be to already compute min/max in aggregate step of each workgroup and then
     // iterate over this (reduced) grid to compute the global min/max
 	if (i == 0) {
-		var minVal:f32 = grid[0].value;
-        var maxVal:f32 = grid[0].value;
-        for (var j:u32 = 1; j < N; j++) {
-            minVal = min(minVal, grid[j].value);
-            maxVal = max(maxVal, grid[j].value);
+		var minVal:f32 = 1000.0;
+        var maxVal:f32 = -1000.0;
+        var cnt:f32 = 0.0;
+        for (var j:u32 = 0; j < N; j++) {
+            if (grid[j].valueN > 0) {
+                minVal = min(minVal, grid[j].value);
+                maxVal = max(maxVal, grid[j].value);
+                cnt += 1.0;
+            }
         }
-        minmaxvalues = vec4<f32>(minVal, maxVal, maxVal - minVal, 0.0);
+        minmaxvalues = vec4<f32>(minVal, maxVal, maxVal - minVal, cnt);
 	}    
 }

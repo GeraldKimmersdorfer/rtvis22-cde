@@ -1,6 +1,6 @@
 import $ from "jquery";
 import { DB } from "./db";
-import { getMonthDifference } from "./helper";
+import { colToString, getMonthDifference } from "./helper";
 
 import * as renderer from './renderer';
 import { GridBuffer } from "./rendering/buffer";
@@ -14,6 +14,8 @@ require('jquery-ui/ui/effects/effect-drop');
 require('jquery-ui/ui/effects/effect-fade');
 require('jquery-ui/ui/widgets/checkboxradio');
 require('vanderlee-colorpicker/jquery.colorpicker');
+
+export var hoverEnabled:boolean = true;
 
 // Shows the error message when webgpu is not available on current browser
 export const ShowNoWebGpuWarning = () => {
@@ -62,6 +64,16 @@ const keyDownHandler = (e:any) => {
       showFooter();
       showInfoMenu();
     }
+  } else if (e.keyCode == 72) { // Key: H
+    // Disable/Enable Hover
+    if (hoverEnabled) {
+      hoverEnabled = false;
+      renderer.uniformBuffer.hoverIndex_i32 = -1;
+      renderer.renderFrame(false, false, true);
+      $("#tooltip").clearQueue().fadeTo(200, 0);
+    } else {
+      hoverEnabled = true;
+    }
   }
 }
 
@@ -92,24 +104,26 @@ export const InitUserInterface = () => {
   $( "#mainMenu" ).dialog({
       position: { my: "left top", at: "left+0 top+0", of: window },
       dialogClass: "no-close",
+      autoOpen: false,
       show: {
-        effect: "drop",
+        effect: "fade",
         duration: 800
       },
       hide: {
-        effect: "drop",
+        effect: "fade",
         duration: 800
       }
   });
   $( "#infoMenu" ).dialog({
     position: { my: "right top", at: "right top", of: window },
     dialogClass: "no-close",
+    autoOpen: false,
     show: {
-      effect: "drop",
+      effect: "fade",
       duration: 800
     },
     hide: {
-      effect: "drop",
+      effect: "fade",
       duration: 800
     }
 });
@@ -187,7 +201,7 @@ export const InitUserInterface = () => {
         } else {
           $("#cp-colb-group").show();
         }
-        renderer.renderFrame(false, false, true);
+        renderer.renderFrame(false, false, true).then(refreshLegend);
       }
     });
     $("#cp-cola").colorpicker({
@@ -195,7 +209,7 @@ export const InitUserInterface = () => {
       colorFormat: "RGBA",
       select: (event:any, data:any) => {
         renderer.uniformBuffer.colorA = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
-        renderer.renderFrame(false, false, true);
+        renderer.renderFrame(false, false, true).then(refreshLegend);
       }
     });
     $("#cp-colb").colorpicker({
@@ -203,7 +217,7 @@ export const InitUserInterface = () => {
       colorFormat: "RGBA",
       select: (event:any, data:any) => {
         renderer.uniformBuffer.colorB = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
-        renderer.renderFrame(false, false, true);
+        renderer.renderFrame(false, false, true).then(refreshLegend);
       }
     });
     $("#cp-colc").colorpicker({
@@ -211,7 +225,7 @@ export const InitUserInterface = () => {
       colorFormat: "RGBA",
       select: (event:any, data:any) => {
         renderer.uniformBuffer.colorC = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
-        renderer.renderFrame(false, false, true);
+        renderer.renderFrame(false, false, true).then(refreshLegend);
       }
     });
     $("#cp-colnull").colorpicker({
@@ -241,28 +255,38 @@ export const InitUserInterface = () => {
       collapsible: true
     });
 
-    var delayTimer:any;
-    $("#canvas-webgpu").mousemove((e:any) => {
-      clearTimeout(delayTimer);
-      delayTimer = setTimeout(() => {
-        let hc = renderer.uniformBuffer.determine_hover_cell(e.clientX, e.clientY);
-        renderer.renderFrame(false, false, true);
-        if (hc.i > 0) {
-          $("#cinfo-group").show(200);
+    var delayHideTimer:any;
+    let map_mouse_move = (x:number, y:number) => {
+      if (hoverEnabled) {
+        clearTimeout(delayHideTimer);
+        let hc = renderer.uniformBuffer.determine_hover_cell(x, y);
+        if (hc.changed && hc.i > 0) {
+          let ttPos = renderer.uniformBuffer.get_tooltipPos_from_coordinates(hc.col, hc.row);
+          var $tt = $("#tooltip");
+          $tt.fadeTo(200, 0.9);
+          $tt.css("left", ttPos.x - ($tt.width() || 0.0)  / 2.0 - 5).css("top", ttPos.y + 5);
           let gridData = renderer.gridBuffer.data[renderer.uniformBuffer.hoverIndex_i32];
           $("#lbl-curval").html(gridData.value.toFixed(5) + " °C");
           $("#lbl-curn").html(gridData.valueN.toFixed(0));
           $("#lbl-curcoord").html(hc.col.toFixed(0) + " | " + hc.row.toFixed(0) + " (" + hc.i + ")");
+          renderer.renderFrame(false, false, true);
         }
-      }, 1);
-
+      }
+    };
+    $("#canvas-webgpu").mousemove((e:any) => {
+      map_mouse_move(e.clientX, e.clientY);
     }).mouseleave(() => {
-      setTimeout(() => {
-        renderer.uniformBuffer.hoverIndex_i32 = -1;
-        renderer.renderFrame(false, false, true);
-        $("#cinfo-group").hide(200);
-      }, 1);
+      if (hoverEnabled) {
+        delayHideTimer = setTimeout(() => {
+          renderer.uniformBuffer.hoverIndex_i32 = -1;
+          renderer.renderFrame(false, false, true);
+          $("#tooltip").clearQueue().fadeTo(200, 0);
+        }, 1);
+      }
     });
+    $("#tooltip").hover((e:any) => { map_mouse_move(e.clientX, e.clientY); }).mousemove((e:any) => { map_mouse_move(e.clientX, e.clientY); });
+    $("#legend").mousemove((e:any) => { map_mouse_move(e.clientX, e.clientY); });
+    $("#footer").mousemove((e:any) => { map_mouse_move(e.clientX, e.clientY); })
 }
 
 export const initWithData = () => {
@@ -282,18 +306,43 @@ export const refreshGraphInformation = (buff:GridBuffer) => {
   $("#lbl-aggrmin").html(info.min.toFixed(5) + " °C");
   $("#lbl-aggravg").html(info.avg.toFixed(5) + " °C");
   $("#lbl-aggrn").html(info.n_total.toString());
+  refreshLegend();
+}
+
+export const refreshLegend = () => {
+  let info = renderer.gridBuffer.get_stats();
+  if (renderer.uniformBuffer.colorMode_u32 == 1) { // diverging colors
+    var min = Math.min(info.min, 0.0);
+    var max = Math.max(info.max, 0.0);
+    $("#lbl-legmin").html(min.toFixed(2) + " °C");
+    $("#lbl-legmax").html(max.toFixed(2) + " °C");
+    let whitePos = (Math.abs(min) / (Math.abs(min) + max) * 100).toFixed(2);
+    $("#b-leg").css("background", `linear-gradient(90deg, ${colToString(renderer.uniformBuffer.colorA)} 0%, ${colToString(renderer.uniformBuffer.colorB)} ${whitePos}%, ${colToString(renderer.uniformBuffer.colorC)} 100%)`);
+  } else { // sequential
+    $("#b-leg").css("background", `linear-gradient(90deg, ${colToString(renderer.uniformBuffer.colorA)} 0%, ${colToString(renderer.uniformBuffer.colorC)} 100%)`);
+  }
+}
+
+export const showLegend = () => {
+  $("#legend").fadeIn(800);
+}
+
+export const hideLegend = () => {
+  $("#legend").fadeOut(800);
 }
 
 export const showFooter = () => {
-    $("#footer").fadeIn(800);
+    $("#footer").delay(800).fadeIn(800);
+    $("#legend").animate({bottom: "5%"}, 800);
 }
 
 export const hideFooter = () => {
   $("#footer").fadeOut(800);
+  $("#legend").delay(800).animate({bottom: "1%"}, 800);
 }
 
 export const showMainMenu = () => {
-    $( "#mainMenu" ).dialog( "open" );
+  $( "#mainMenu" ).dialog( "open" );
 }
 
 export const hideMainMenu = () => {

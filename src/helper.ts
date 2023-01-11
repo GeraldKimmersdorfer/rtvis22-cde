@@ -1,3 +1,5 @@
+import { Vec4_f32 } from "./rendering/buffer";
+
 export const CheckWebGPU = () => {
     return "gpu" in navigator;
 }
@@ -19,6 +21,10 @@ export const formatMilliseconds = (s: number) => {
     } else {
         return `${(s / 3600000).toFixed(2)} h`;
     }
+}
+
+export const colToString = (col: Vec4_f32):string => {
+    return `rgba(${(col.x_f32 * 255).toFixed(0)},${(col.y_f32 * 255).toFixed(0)},${(col.z_f32 * 255).toFixed(0)}, ${(col.w_f32).toFixed(4)})`;
 }
 
 export const createGpuBuffer = <T extends Uint8Array | Uint32Array | Float32Array>(

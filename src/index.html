@@ -101,7 +101,7 @@
                 <input type="text" id="cp-colnull" value="rgba(255,255,255,0.05)" />
 
                 <p>Map Color:</p>
-                <input type="text" id="cp-colmap" value="rgba(160,169,174,1.0)" />
+                <input type="text" id="cp-colmap" value="rgba(160,169,174,0.2)" />
             </div>
         </div>
 
@@ -118,14 +118,6 @@
                     N_total: <span id="lbl-aggrn" class="time-range">0</span><br />
                 </p>
 
-                <span id="cinfo-group" style="display: none;">
-                    <hr>
-                <p>
-
-                    Coordinates: <span id="lbl-curcoord" class="time-range">4 | 2</span><br />
-                    Value: <span id="lbl-curval" class="time-range">4 ms (Ø 4.5)</span><br />
-                    N: <span id="lbl-curn" class="time-range">234</span><br />
-                </p></span>
             </div>
 
             <h3>Compute Time</h3>
@@ -142,8 +134,34 @@
         </div>
     </div>
 
+    <div id="tooltip" style="display:none">
+        <table>
+            <tr>
+                <td>Coordinates:</td>
+                <td class="time-range" id="lbl-curcoord">3 | 5 (23)</td>
+            </tr>
+            <tr>
+                <td>Value:</td>
+                <td class="time-range" id="lbl-curval">23.21 °C</td>
+            </tr>
+            <tr>
+                <td>N:</td>
+                <td class="time-range" id="lbl-curn">2123</td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="legend" style="display:none">
+        <table>
+            <tr>
+                <td id="lbl-legmin" width="1px">-22.98°C</td>
+                <td id="b-leg"></td>
+                <td id="lbl-legmax" width="1px">23.13°C</td>
+            </tr>
+        </table>
+    </div>
     <canvas id="canvas-webgpu" style="display:none;"></canvas>
-    <div id="footer" style="display:none;">
+    <div id="footer">
         <b>Climatic Difference Explorer</b>
         <span style="opacity: 0.8;">v.1.0</span>
         <span style="float:right; opacity: 0.8;">&copy; 2022 Gerald Kimmersdorfer, Dominik Wolf</span>

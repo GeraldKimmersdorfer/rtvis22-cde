@@ -67,7 +67,6 @@ fn cs_main(
     let col = i % uniforms.gridResolution.x;
     let row = i / uniforms.gridResolution.x;
     var mPointPos:vec2<f32> = vec2<f32>(f32(col) * uniforms.gridProperties.z, f32(row) * uniforms.gridProperties.y);
-    var aspect = f32(uniforms.screenSize.x) / f32(uniforms.screenSize.y);
 
     if (row % 2 == 1) { // offset for odd rows
         let x0 = uniforms.gridProperties.z / 2.0;
