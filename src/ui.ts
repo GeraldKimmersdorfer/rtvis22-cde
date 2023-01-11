@@ -203,7 +203,7 @@ export const InitUserInterface = () => {
     $("#s-colormode").selectmenu({
       change: function( event: any, data: any ) {
         renderer.uniformBuffer.colorMode_u32 = +data.item.value;
-        if (renderer.uniformBuffer.colorMode_u32 == 0) {
+        if (renderer.uniformBuffer.colorMode_u32 in [0, 1]) {
           $("#cp-colb-group").hide();
         } else {
           $("#cp-colb-group").show();
@@ -220,7 +220,7 @@ export const InitUserInterface = () => {
         let ub:any = renderer.uniformBuffer;
         ub[$itm.data("uniname")] = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
         renderer.renderFrame(false, false, true).then(refreshLegend);
-        $itm.css("background", colToString(ub[$itm.data("uniname")]));        
+        $itm.css("background", colToString(ub[$itm.data("uniname")]));
       }
     }).each(function() {
       $(this).css("background", $(this).attr("value") || "none");
