@@ -66,18 +66,55 @@ When the mouse cursor is placed over a hexagon, additional information about the
 
 The configuration window is organized into three sections:
 
-1. The **Time Selection** section allows to select the date ranges for comparison.
-2. The **Grid Settings** section provides options for configuring the hexagonal grid in the visualization.
-3. The **Color Settings** section allows to adjust the colors used in the visualization.
+1. The **time selection** section allows to select the date ranges for comparison.
+2. The **grid settings** section provides options for configuring the hexagonal grid in the visualization.
+3. The **color settings** section allows to adjust the colors used in the visualization.
 
 #### Time Selection
 
-The Time Selection section enables users to select two year ranges for comparison. Users can select the start and end years for Time Range A and Time Range B using sliders. Additionally, a drop-down menu allows users to choose whether to compare the average temperature values for the entire year or for a specific month.
+The time selection section enables users to select two year ranges for comparison. Users can select the start and end years for _Time Range A_ and _Time Range B_ using sliders. Additionally, a drop-down menu allows users to choose whether to compare the average temperature values for the entire year or for a specific month.
 
 ![](images/configuration-time.png)
 
 #### Grid Settings
 
+The grid settings section of the configuration window allows to customize the hexagonal grid displayed in the visualization. The section includes sliders for adjusting the _Grid Scale_, which refers to the size of the individual hexagons of the grid, and _Grid Border_, which refers to the thickness of the border around each hexagon. Additionally, users can toggle on or off the equidistant grid option, which ensures that all sides of the hexagons have the same length. When the option is deselected, the hexagons will be distorted to match the aspect ratio of the underlying world map.
 
+The _Grid Scale_ and _Grid Border_ settings affect the coverage of the hexagons on the world map, so when these settings are adjusted, the aggregation of the data points will be recalculated.
 
 ![](images/configuration-grid.png)
+
+#### Color Settings
+
+The color settings section allows users to switch between a sequential or a diverging color map using a drop-down menu. Sequential color maps use a progression of colors between two colors, while diverging color maps use two different colors that progress through a neutral color in the middle. Users can select the start and end colors of the gradient for both types of color maps using a color picker. Additionally, when using a diverging color map, users can also select the neutral color in the middle. The section also offers the option to use a symmetric variant for both color maps, which shows the same range of values at both ends of the scale. In addition, this section provides an option to customize the colors of the empty hexagons and the world map background.
+
+![](images/configuration-color.png)
+
+![](images/visualization-color-maps.png)
+
+### Information Window
+
+The information window is organized into two sections:
+
+1. The **general** section that displays information about the data currently being visualized.
+2. The **help** section that offers a brief introduction to the application and its features.
+
+#### General
+
+This section displays statistical values about the visualized data, which include:
+
+* **Visualization**
+  1. _Maximum_, _Minimum_, and _Average_: The highest, lowest, and average value of the data points within the entire grid.
+  2. _N_total_: The total number of data points currently aggregated.
+* **Compute Times**
+  1. _Aggregate_ and _Averaging_: Time taken by the compute shader to process the data.
+  2. _Rendering_: Time taken for rendering the map and grid.
+  3. _WriteBack_: Time taken for writing the aggregated data back to the main memory for client access.
+
+![](images/information-general.png)
+
+#### Help
+
+This section offers a brief overview of the application, including its features, data sources, and useful keyboard shortcuts.
+
+![](images/information-help.png)
