@@ -33,11 +33,20 @@ struct GridEntry {
     valueN: u32
 }
 
+const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-100.0, 100.0);
+const AGGREGATE_WORKGROUP_SIZE:u32 = 64;
+const MAX_U32:f32 = 4294967295.0;
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 /* NOTE: I had to figure out the hardway that compute shaders can't write in an array<vec3<f32>>... */
 @group(0) @binding(1) var<storage, read_write> grid: array<GridEntry>;
 @group(0) @binding(2) var<storage, read> positions: array<PositionEntry>;
 @group(0) @binding(3) var<storage, read> temperatures: array<TemperatureEntry>;
+@group(0) @binding(4) var<storage, read_write> workgroupBounds: array<vec2<f32>>;
+
+var<workgroup> sharedIntMax:atomic<u32>;
+var<workgroup> sharedIntMin:atomic<u32>;
+var<workgroup> sharedN:atomic<u32>;
 
 fn pos_inside_circle(pos:vec2<f32>, circle_middle:vec2<f32>, circle_radius:f32) -> bool {
     var distord:vec2<f32> = vec2<f32>(1.0);
@@ -49,20 +58,29 @@ fn pos_inside_circle(pos:vec2<f32>, circle_middle:vec2<f32>, circle_radius:f32) 
     return (distance(pos * distord, circle_middle * distord) < circle_radius);
 }
 
-@compute @workgroup_size(64)
+// We discretize linearly between ATOMIC_FLOAT_DIS_BOUNDS and hope that no avg temperature will be outside oO
+fn f32_to_u32(val:f32) -> u32 {
+    return u32((val - ATOMIC_FLOAT_DIS_BOUNDS.x) / (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) * MAX_U32);
+}
+fn u32_to_f32(val:u32) -> f32 {
+    return f32(val) / MAX_U32 * (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) + ATOMIC_FLOAT_DIS_BOUNDS.x;
+}
+
+@compute @workgroup_size(AGGREGATE_WORKGROUP_SIZE)
 fn cs_main(
-    @builtin(global_invocation_id) globalId: vec3<u32>
+    @builtin(global_invocation_id) globalId: vec3<u32>,
+    @builtin(local_invocation_index) localId: u32, // Current index inside the workgroup, 0 is in charge for writting the shared max/min
+    @builtin(workgroup_id) workgroupId: vec3<u32>,  // Workgroup index inside workgroup grid, (only x relevant)
 ) {
     let i: u32 = globalId.x;
     let N: u32 = uniforms.gridResolution.x * uniforms.gridResolution.y;
     var gridValue:GridEntry;
-	// Guard against out-of-bounds workgroup sizes
-	if (i >= N) {
-		return;
-	}
-
     let time_range_bounds:vec4<u32> = uniforms.timeRangeBounds;
 
+    /// ================================================================================
+    /// CALCULATE GRID PROPERTIES
+    /// The following calculates the middle points for the current cell (thread=cell)
+    /// ================================================================================
     // Note: Executing the compute shader on the grid is probably a more elegant solution!
     let col = i % uniforms.gridResolution.x;
     let row = i / uniforms.gridResolution.x;
@@ -74,13 +92,18 @@ fn cs_main(
     }
     gridValue.mPoint = mPointPos;
 
-    //var val:f32 = f32(i) / f32(N);
+    /// ================================================================================
+    /// AGGREGATE VALUES
+    /// The most important step: Aggregate all temperature values inside the given time_
+    /// range and the current cell position.
+    /// ================================================================================
     var val = 0.0;
     var valN:u32 = 0;
 
     let posN = arrayLength(&positions);
     var tempSum: vec2<f32> = vec2<f32>(0.0, 0.0);
     var tempN: vec2<u32> = vec2<u32>(0, 0);
+    // ToDo: Use kd-tree or quadtree to speed up things!
     for (var j:u32=0; j < posN; j++) {
         let p:PositionEntry = positions[j];
         // ToDo: Collision should be checked with hexagon not with circle (we have possible overlaps right now)
@@ -111,9 +134,41 @@ fn cs_main(
         valN = tempN.x + tempN.y;
     }
 
+    /// ================================================================================
+    /// GET MIN/MAX PER WORKGROUP
+    /// The following calculates the min/max values per workgroup and writes it into the
+    /// workgroup-bounds buffer.
+    /// ================================================================================
+    if (localId == 0) {
+        atomicStore(&sharedIntMin, u32(MAX_U32)); // Initialize IntMin
+    }
+    workgroupBarrier(); 
+    if (valN > 0) {
+        let valInt:u32 = f32_to_u32(val);
+        atomicMin(&sharedIntMin, valInt);
+        atomicMax(&sharedIntMax, valInt);
+        atomicAdd(&sharedN, valN);
+    }
+    workgroupBarrier();
+    if (localId == 0) {
+        // First thread of local workgroup is in charge to write the workgroups min/max values
+        let workgroupN:u32 = atomicLoad(&sharedN);
+        var sharedBounds:vec2<f32> = vec2<f32>(-1000.0, 1000.0);
+        if (workgroupN > 0) {
+            sharedBounds = vec2(u32_to_f32(atomicLoad(&sharedIntMin)), u32_to_f32(atomicLoad(&sharedIntMax)));
+        }
+        workgroupBounds[workgroupId.x] = sharedBounds;
+        /*
+        if (workgroupN > 0) {
+            val = sharedBounds[1];
+            valN = workgroupId.x * 1000;
+        }
+        valN = workgroupN + 100000;*/
+    }
+
     gridValue.value = val;
     gridValue.valueN = valN;
-
-    grid[i] = gridValue;
-    
+    if (i < N) { // Guard against out-of-bounds workgroup sizes
+        grid[i] = gridValue;
+    }
 }

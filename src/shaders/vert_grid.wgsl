@@ -22,7 +22,7 @@ struct Uniforms {
 
     hoverIndex: i32,                // contains the id of the active grid cell
 };
-
+ 
 struct GridEntry {
     mPoint: vec2<f32>,
     value: f32,
@@ -130,6 +130,10 @@ fn vs_main(
     if (uniforms.hoverIndex == i32(instanceIndex)) {
         output.vColor.a = output.vColor.a * 1.5 + 0.1;
     }
+
+    /*if (gridVal.valueN < 100000) {
+        output.vColor.a = 0.1;
+    }*/
 
     return output;
 }

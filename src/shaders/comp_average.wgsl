@@ -25,32 +25,65 @@ struct GridEntry {
     valueN: u32
 }
 
-@group(0) @binding(0) var<uniform> uniforms: Uniforms;
-@group(0) @binding(1) var<storage, read_write> grid: array<GridEntry>;
-@group(0) @binding(2) var<storage, read_write> minmaxvalues: vec4<f32>;
+const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-100.0, 100.0);
+const AVERAGE_WORKGROUP_SIZE:u32 = 64;
+const MAX_U32:f32 = 4294967295.0;
 
+//@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+//@group(0) @binding(1) var<storage, read_write> grid: array<GridEntry>; // todo not necessary
+@group(0) @binding(0) var<storage, read_write> minmaxvalues: vec4<f32>;
+@group(0) @binding(1) var<storage, read> workgroupBounds: array<vec2<f32>>;
 
-@compute @workgroup_size(64)
+var<workgroup> sharedIntMax:atomic<u32>;
+var<workgroup> sharedIntMin:atomic<u32>;
+var<workgroup> sharedCount:atomic<u32>;
+
+// We discretize linearly between ATOMIC_FLOAT_DIS_BOUNDS and hope that no avg temperature will be outside oO
+fn f32_to_u32(val:f32) -> u32 {
+    return u32((val - ATOMIC_FLOAT_DIS_BOUNDS.x) / (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) * MAX_U32);
+}
+fn u32_to_f32(val:u32) -> f32 {
+    return f32(val) / MAX_U32 * (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) + ATOMIC_FLOAT_DIS_BOUNDS.x;
+}
+
+@compute @workgroup_size(AVERAGE_WORKGROUP_SIZE)
 fn cs_main(
-    @builtin(global_invocation_id) globalId: vec3<u32>
+    @builtin(local_invocation_index) localId: u32, // Current index inside the workgroup
 ) {
-    let i: u32 = globalId.x;
-    let N: u32 = uniforms.gridResolution.x * uniforms.gridResolution.y;	
-
-	// ToDo: This is ugly, as we just use one thread in the whole workgroup and iterate over the full grid...
-    // Better way would be to already compute min/max in aggregate step of each workgroup and then
-    // iterate over this (reduced) grid to compute the global min/max
-	if (i == 0) {
-		var minVal:f32 = 1000.0;
-        var maxVal:f32 = -1000.0;
-        var cnt:f32 = 0.0;
-        for (var j:u32 = 0; j < N; j++) {
-            if (grid[j].valueN > 0) {
-                minVal = min(minVal, grid[j].value);
-                maxVal = max(maxVal, grid[j].value);
-                cnt += 1.0;
-            }
+    let N: u32 = arrayLength(&workgroupBounds);
+    // We have one workgroup with AVERAGE_WORKGROUP_SIZE threads available so lets do this as follows:
+    /// STEP 1: Get min/max of every i+AVERAGE_WORKGROUP_SIZE*x item:
+    var minVal:f32 = 1000.0;
+    var maxVal:f32 = -1000.0;
+    var cnt:u32 = 0;
+    for (var i:u32=localId; i < N; i+=AVERAGE_WORKGROUP_SIZE) {
+        let cwb = workgroupBounds[i];
+        if ((cwb.y - cwb.x) < 1000) { // Sanity check: if > 1000 probably no value in whole workgroup
+            minVal = min(minVal, cwb.x);
+            maxVal = max(maxVal, cwb.y);
+            cnt += 1;
         }
-        minmaxvalues = vec4<f32>(minVal, maxVal, maxVal - minVal, cnt);
+    }
+
+    /// STEP 2: Get min/max of the workgroup:
+    if (localId == 0) {
+        atomicStore(&sharedIntMin, u32(MAX_U32)); // Initialize IntMin
+    }
+    workgroupBarrier(); 
+    if (cnt > 0) {
+        atomicMin(&sharedIntMin, f32_to_u32(minVal));
+        atomicMax(&sharedIntMax, f32_to_u32(maxVal));
+        atomicAdd(&sharedCount, cnt);
+    }
+    workgroupBarrier();
+
+    /// STEP 3: Thread 0 writes the result:
+	if (localId == 0) {
+        let workgroupCount:u32 = atomicLoad(&sharedCount);
+        var sharedBounds:vec2<f32> = vec2<f32>(0.0, 0.0);
+        if (workgroupCount > 0) {
+            sharedBounds = vec2(u32_to_f32(atomicLoad(&sharedIntMin)), u32_to_f32(atomicLoad(&sharedIntMax)));
+        }
+        minmaxvalues = vec4<f32>(sharedBounds.x, sharedBounds.y, sharedBounds.y - sharedBounds.x, f32(workgroupCount));
 	}    
 }

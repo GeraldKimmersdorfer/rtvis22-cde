@@ -25,6 +25,7 @@ var _context: GPUCanvasContext;
 var _positionBuffer: GPUBuffer;
 var _temperatureBuffer: GPUBuffer;
 var _gridBuffer: GPUBuffer;
+var _workgroupBoundsBuffer: GPUBuffer;
 var _gridReadBuffer: GPUBuffer;
 var _minmaxValueBuffer: GPUBuffer;
 var _uniformBuffer: GPUBuffer;
@@ -43,6 +44,9 @@ var _averageBindGroup: GPUBindGroup;
 
 var _initialised: boolean = false;
 var _mapTriangleCount: number;
+
+let AGGREGATE_WORKGROUP_SIZE = 64; // dont forget to change in shader
+let AVERAGE_WORKGROUP_SIZE = 64; // dont forget to change in shader
 
 export var uniformBuffer: UniformBuffer = new UniformBuffer();
 export var gridBuffer: GridBuffer = new GridBuffer();
@@ -114,10 +118,10 @@ const createGridBuffer = () => {
     uniformBuffer.set_screensize(_canvas.width, _canvas.height);
     let pointCount = uniformBuffer.get_pointcount();
     _gridBuffer = createEmptyGPUBuffer(_device, pointCount * 4 * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC);
+    _workgroupBoundsBuffer = createEmptyGPUBuffer(_device, Math.ceil(pointCount / AGGREGATE_WORKGROUP_SIZE) * 4 * 2 , GPUBufferUsage.STORAGE);
 }
 
 const createGridReadBuffer = () => {
-    let pointCount = uniformBuffer.get_pointcount();
     _gridReadBuffer = createEmptyGPUBuffer(_device, _gridBuffer.size, GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST);
 }
 
@@ -257,16 +261,18 @@ const createBindGroups = () => {
             { binding: 0, resource: { buffer: _uniformBuffer } },
             { binding: 1, resource: { buffer: _gridBuffer } },
             { binding: 2, resource: { buffer: _positionBuffer } },
-            { binding: 3, resource: { buffer: _temperatureBuffer } }
+            { binding: 3, resource: { buffer: _temperatureBuffer } },
+            { binding: 4, resource: { buffer: _workgroupBoundsBuffer }}
         ]
     });
 
     _averageBindGroup = _device.createBindGroup({
         layout: _averagePipeline.getBindGroupLayout(0),
         entries: [
-            { binding: 0, resource: { buffer: _uniformBuffer } },
-            { binding: 1, resource: { buffer: _gridBuffer } },
-            { binding: 2, resource: { buffer: _minmaxValueBuffer } }
+            //{ binding: 0, resource: { buffer: _uniformBuffer } },
+            //{ binding: 1, resource: { buffer: _gridBuffer } },
+            { binding: 0, resource: { buffer: _minmaxValueBuffer } },
+            { binding: 1, resource: { buffer: _workgroupBoundsBuffer }}
         ]
     });
 
@@ -310,7 +316,7 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
         const aggregatePass = commandEncoder.beginComputePass();
         aggregatePass.setPipeline(_aggregatePipeline);
         aggregatePass.setBindGroup(0, _aggregateBindGroup);
-        aggregatePass.dispatchWorkgroups(Math.ceil(pointCount / 64));
+        aggregatePass.dispatchWorkgroups(Math.ceil(pointCount / AGGREGATE_WORKGROUP_SIZE));
         aggregatePass.end();
 
         var start = Date.now();
