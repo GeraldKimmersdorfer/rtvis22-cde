@@ -235,6 +235,16 @@ export const InitUserInterface = () => {
       heightStyle: "content",
       collapsible: true
     });
+    $("#but-benchmark").on("click", function() {
+      if (renderer.benchmarkEnabled) {
+        renderer.stopBenchmark();
+        $(this).html("Start benchmark");
+      } else {
+        $(this).html("Stop benchmark");
+        renderer.startBenchmark();
+        
+      }
+    });
 
     var delayHideTimer:any;
     let map_mouse_move = (x:number, y:number) => {

@@ -25,7 +25,7 @@ struct GridEntry {
     valueN: u32
 }
 
-const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-100.0, 100.0);
+const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-1000.0, 1000.0);
 const AVERAGE_WORKGROUP_SIZE:u32 = 64;
 const MAX_U32:f32 = 4294967295.0;
 

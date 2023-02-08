@@ -15,6 +15,7 @@ import * as ui from './ui';
 import { TH } from './ui';
 
 import geoJsonData from './assets/world.geojson';
+import { BlobOptions } from 'buffer';
 
 
 var _canvas: HTMLCanvasElement;
@@ -50,6 +51,7 @@ let AVERAGE_WORKGROUP_SIZE = 64; // dont forget to change in shader
 
 export var uniformBuffer: UniformBuffer = new UniformBuffer();
 export var gridBuffer: GridBuffer = new GridBuffer();
+export var benchmarkEnabled: boolean = false;
 
 export const init = async () => {
     _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
@@ -291,6 +293,17 @@ const createBindGroups = () => {
             { binding: 2, resource: { buffer: _minmaxValueBuffer } }
         ]
     });
+}
+
+export const stopBenchmark = async () => {
+    benchmarkEnabled = false;
+}
+
+export const startBenchmark = async () => {
+    benchmarkEnabled = true;
+    while (benchmarkEnabled) {
+        await renderFrame(false, false, false, true);
+    }
 }
 
 export const renderFrame = async (recreateGridBuffer: boolean = false, recreatePositionBuffer: boolean = false, onlyDrawStage: boolean = false, readBackGridBuffer: boolean = false) => {

@@ -33,7 +33,7 @@ struct GridEntry {
     valueN: u32
 }
 
-const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-100.0, 100.0);
+const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-1000.0, 1000.0);
 const AGGREGATE_WORKGROUP_SIZE:u32 = 64;
 const MAX_U32:f32 = 4294967295.0;
 
@@ -158,12 +158,6 @@ fn cs_main(
             sharedBounds = vec2(u32_to_f32(atomicLoad(&sharedIntMin)), u32_to_f32(atomicLoad(&sharedIntMax)));
         }
         workgroupBounds[workgroupId.x] = sharedBounds;
-        /*
-        if (workgroupN > 0) {
-            val = sharedBounds[1];
-            valN = workgroupId.x * 1000;
-        }
-        valN = workgroupN + 100000;*/
     }
 
     gridValue.value = val;
