@@ -8,7 +8,7 @@ import comp_average_shader from './shaders/comp_average.wgsl'
 import * as geoJsonCoords from '@mapbox/geojson-coords';
 import { Delaunay } from 'd3-delaunay';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
-import { createEmptyGPUBuffer, createGpuBuffer } from './helper'
+import { createEmptyGPUBuffer, createGpuBuffer, degrees_to_radians } from './helper'
 import { GridBuffer, UniformBuffer } from './rendering/buffer';
 import { DB } from './db';
 import * as ui from './ui';
@@ -16,6 +16,10 @@ import { TH } from './ui';
 
 import geoJsonData from './assets/world.geojson';
 import { BlobOptions } from 'buffer';
+import { Robinson } from './projections';
+import { Vec2_f32 } from './rendering/vectors';
+
+require('jquery-ui/ui/widgets/dialog');
 
 
 var _canvas: HTMLCanvasElement;
@@ -37,11 +41,13 @@ var _drawMapPipeline: GPURenderPipeline;
 var _drawGridPipeline: GPURenderPipeline;
 var _aggregatePipeline: GPUComputePipeline;
 var _averagePipeline: GPUComputePipeline;
+var _drawPointsPipeline: GPURenderPipeline;
 
 var _drawMapBindGroup: GPUBindGroup;
 var _drawGridBindGroup: GPUBindGroup;
 var _aggregateBindGroup: GPUBindGroup;
 var _averageBindGroup: GPUBindGroup;
+var _drawPointsGroup: GPUBindGroup;
 
 var _initialised: boolean = false;
 var _mapTriangleCount: number;
@@ -52,6 +58,7 @@ let AVERAGE_WORKGROUP_SIZE = 64; // dont forget to change in shader
 export var uniformBuffer: UniformBuffer = new UniformBuffer();
 export var gridBuffer: GridBuffer = new GridBuffer();
 export var benchmarkEnabled: boolean = false;
+export var pointRendering: boolean = true;
 
 export const init = async () => {
     _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
@@ -87,9 +94,16 @@ const initGeography = () => {
     const delaunay = Delaunay.from(geoData);
 
     const points: number[] = [];
+    let robinson = new Robinson(1.0, 1.97);
     for (let i = 0; i < delaunay.points.length; i += 2) {
-        points.push(delaunay.points[i] / 180.0); // longitude
-        points.push(delaunay.points[i + 1] / 90.0); // latitude
+        //points.push(delaunay.points[i] / 180.0); // longitude
+        //points.push(delaunay.points[i + 1] / 90.0); // latitude
+        let tmp:Vec2_f32 = robinson.project(delaunay.points[i + 1], delaunay.points[i]);
+        points.push( tmp.x_f32 * 2.0); // latitude 
+        points.push( tmp.y_f32 * 2.0); // longitude
+               
+        //DB.positions[i]['x'] = tmp.x_f32;
+        //DB.positions[i]['y'] = tmp.y_f32;
     }
 
     const triangles: number[] = [];
@@ -129,9 +143,19 @@ const createGridReadBuffer = () => {
 
 const createPositionBuffer = () => {
     // EQUIRECTANGULAR PROJECTION (formulas taken from here: https://en.wikipedia.org/wiki/Equirectangular_projection)
+    let R:number = 1.0;
+    let phi_1:number = degrees_to_radians(0.0);
+    let phi_0:number = 0.0;
+    let lambda_0:number = 0.0;
+    let robinson = new Robinson(1.0, 1.97, 0.5, 0.5);
     for (let i = 0; i < DB.positions.length; i++) {
-        DB.positions[i]['x'] = (DB.positions[i]['lon'] + 180) * (1.0 / 360);
-        DB.positions[i]['y'] = (DB.positions[i]['lat'] + 90) * (1.0 / 180);
+        let lambda = (DB.positions[i]['lon'] + 180.0) / 360.0;
+        let phi = (DB.positions[i]['lat'] + 90.0) / 180.0;
+        DB.positions[i]['x'] = R*(lambda - lambda_0) * Math.cos(phi_1);
+        DB.positions[i]['y'] = R*(phi - phi_0);
+        let tmp:Vec2_f32 = robinson.project(DB.positions[i]['lat'], DB.positions[i]['lon']);
+        DB.positions[i]['x'] = tmp.x_f32;
+        DB.positions[i]['y'] = tmp.y_f32;
     }
 
     const positionsArrayBuffer = new ArrayBuffer(DB.positions.length * 4 * 4);
@@ -293,6 +317,14 @@ const createBindGroups = () => {
             { binding: 2, resource: { buffer: _minmaxValueBuffer } }
         ]
     });
+
+    _drawPointsGroup = _device.createBindGroup({
+        layout: _drawPointsPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: _uniformBuffer }},
+            { binding: 1, resource: { buffer: _positionBuffer }}
+        ]
+    })
 }
 
 export const stopBenchmark = async () => {
@@ -376,6 +408,10 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
     _device.queue.submit([commandEncoder.finish()]);
     await _device.queue.onSubmittedWorkDone();
     TH.pushTime("rend", Date.now() - start);
+
+    if (pointRendering) {
+
+    }
 
 
     if (readBackGridBuffer || recreateGridBuffer) {

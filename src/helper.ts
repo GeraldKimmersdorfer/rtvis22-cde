@@ -1,4 +1,4 @@
-import { Vec4_f32 } from "./rendering/buffer";
+import { Vec4_f32 } from "./rendering/vectors";
 
 export const CheckWebGPU = () => {
     return "gpu" in navigator;
@@ -55,4 +55,12 @@ export const createEmptyGPUBuffer = (
         size: size,
         usage: usageFlag
     });
+}
+
+export const degrees_to_radians = (degrees:number) : number => {
+    return degrees * (Math.PI/180);
+}
+
+export const radians_to_degrees = (radians:number) : number => {
+    return radians * (180.0/Math.PI);
 }

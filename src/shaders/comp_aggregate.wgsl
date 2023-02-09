@@ -52,7 +52,7 @@ fn pos_inside_circle(pos:vec2<f32>, circle_middle:vec2<f32>, circle_radius:f32) 
     var distord:vec2<f32> = vec2<f32>(1.0);
     if (uniforms.gridAspect == 1) {
         // In order to take into account that the hexagons might be distorted we'll stretch the points accordingly such that
-        // we again can check with a simple circle
+        // we can check with a simple circle again
         distord.x = f32(uniforms.screenSize.x) / f32(uniforms.screenSize.y);
     }
     return (distance(pos * distord, circle_middle * distord) < circle_radius);
