@@ -1,6 +1,7 @@
 import $ from "jquery";
 import { DB } from "./db";
 import { colToString, getMonthDifference } from "./helper";
+import { setCurrentProjection } from "./projections";
 
 import * as renderer from './renderer';
 import { GridBuffer } from "./rendering/buffer";
@@ -278,7 +279,15 @@ export const InitUserInterface = () => {
     $("#tooltip").hover((e:any) => { map_mouse_move(e.clientX, e.clientY); }).mousemove((e:any) => { map_mouse_move(e.clientX, e.clientY); });
     $("#legend").mousemove((e:any) => { map_mouse_move(e.clientX, e.clientY); });
     $("#footer").mousemove((e:any) => { map_mouse_move(e.clientX, e.clientY); })
-}
+    
+    $("#s-projection").selectmenu({
+      change: function( event: any, data: any ) {
+        setCurrentProjection(data.item.value);
+        renderer.renderFrame(true, true, false, true, true);
+      }
+    });
+
+  }
 
 export const initWithData = () => {
   $( "#s-tra" ).slider({

@@ -27,10 +27,11 @@ struct Uniforms {
 
 @vertex
 fn vs_main(
-    @location(0) pos: vec4<f32>
+    @location(0) pos: vec2<f32>
 ) -> Output {
     var output: Output;
-    output.Position = pos;
+    let pos_transformed:vec2<f32> = (pos - vec2<f32>(0.5, 0.5)) * vec2<f32>(2.0, 2.0);
+    output.Position = vec4<f32>(pos_transformed.xy, 0.0, 1.0);
     output.vColor = uniforms.colorMap;
     return output;
 }

@@ -1,4 +1,29 @@
+import { degrees_to_radians } from "./helper";
 import { Vec2_f32 } from "./rendering/vectors";
+
+
+
+class Equirectangular {
+    
+    R:number = 1.0;
+    phi_1:number = 0.0;
+    phi_0:number = 0.0;
+    lambda_0:number = 0.0;
+
+    project(lat:number, lng:number):Vec2_f32 {
+        let lambda = lng;
+        let phi = lat;
+        //let lambda = (DB.positions[i]['lon'] + 180.0) / 360.0;
+        //let phi = (DB.positions[i]['lat'] + 90.0) / 180.0;
+        var point:Vec2_f32 = {
+            x_f32 : ((lambda - this.lambda_0) * Math.cos(degrees_to_radians(this.phi_1)) + 180.0) / 360.0,
+            y_f32 : ((phi - this.phi_0) + 90.0) / 180.0
+        };
+        point.x_f32 *= this.R;
+        point.y_f32 *= this.R;
+        return point;
+    }
+}
 
 export class Robinson {
 
@@ -10,7 +35,7 @@ export class Robinson {
     AA:Array<number>;
     BB:Array<number>;
 
-    constructor(mapWidth:number, mapHeight:number, fudgeX:number = 0, fudgeY:number = 0) {
+    constructor(mapWidth:number = 1.0, mapHeight:number = 1.97, fudgeX:number = 0.5, fudgeY:number = 0.5) {
         this.mapWidth = mapWidth;
         this.mapHeight = mapHeight;
         this.fudgeX = fudgeX;
@@ -54,4 +79,19 @@ export class Robinson {
 
     }
 
+}
+
+var _projectionFunctions:any = {
+    "Equirectangular": new Equirectangular(),
+    "Robinson": new Robinson(),
+}
+
+var _currentProjection:any = _projectionFunctions['Equirectangular'];
+
+export function setCurrentProjection(projName:string) {
+    _currentProjection = _projectionFunctions[projName];
+}
+
+export function projectPoint(lat:number, lng:number):Vec2_f32 {
+    return _currentProjection.project(lat, lng);
 }

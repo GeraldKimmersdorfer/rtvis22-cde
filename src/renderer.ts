@@ -3,7 +3,9 @@ import frag_map_shader from './shaders/frag_map.wgsl';
 import vert_grid_shader from './shaders/vert_grid.wgsl';
 import frag_grid_shader from './shaders/frag_grid.wgsl';
 import comp_aggregate_shader from './shaders/comp_aggregate.wgsl';
-import comp_average_shader from './shaders/comp_average.wgsl'
+import comp_average_shader from './shaders/comp_average.wgsl';
+import vert_points_shader from './shaders/vert_points.wgsl';
+import frag_points_shader from './shaders/frag_points.wgsl';
 
 import * as geoJsonCoords from '@mapbox/geojson-coords';
 import { Delaunay } from 'd3-delaunay';
@@ -16,7 +18,7 @@ import { TH } from './ui';
 
 import geoJsonData from './assets/world.geojson';
 import { BlobOptions } from 'buffer';
-import { Robinson } from './projections';
+import { projectPoint, Robinson } from './projections';
 import { Vec2_f32 } from './rendering/vectors';
 
 require('jquery-ui/ui/widgets/dialog');
@@ -47,10 +49,11 @@ var _drawMapBindGroup: GPUBindGroup;
 var _drawGridBindGroup: GPUBindGroup;
 var _aggregateBindGroup: GPUBindGroup;
 var _averageBindGroup: GPUBindGroup;
-var _drawPointsGroup: GPUBindGroup;
+var _drawPointsBindGroup: GPUBindGroup;
 
 var _initialised: boolean = false;
 var _mapTriangleCount: number;
+var _mapPoints: number[];   // lat lon original points of map
 
 let AGGREGATE_WORKGROUP_SIZE = 64; // dont forget to change in shader
 let AVERAGE_WORKGROUP_SIZE = 64; // dont forget to change in shader
@@ -71,13 +74,11 @@ export const init = async () => {
         format: format,
     });
 
-    const { points, triangles } = initGeography();
-    _mapTriangleCount = triangles.length;
-
+    
     // Create Buffer
     uniformBuffer.refresh_db_properties(DB);
     _uniformBuffer = createGpuBuffer(_device, uniformBuffer.get_buffer(), Uint8Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
-    createMapBuffers(points, triangles);
+    createMapBuffer();
     createGridBuffer();
     createPositionBuffer();
     createTemperatureBuffer();
@@ -89,22 +90,26 @@ export const init = async () => {
     _initialised = true;
 }
 
-const initGeography = () => {
+const getProjectedMapPoints = () => {
+    const pointsProjected:number[] = [];
+    for (let i = 0; i < _mapPoints.length; i += 2) {
+        let tmp:Vec2_f32 = projectPoint(_mapPoints[i], _mapPoints[i+1]);
+        pointsProjected.push( tmp.x_f32 ); // latitude 
+        pointsProjected.push( tmp.y_f32 ); // longitude
+    }
+    return pointsProjected;
+}
+
+const createMapBuffer = () => {
     const geoData = geoJsonCoords(geoJsonData);
     const delaunay = Delaunay.from(geoData);
 
     const points: number[] = [];
-    let robinson = new Robinson(1.0, 1.97);
     for (let i = 0; i < delaunay.points.length; i += 2) {
-        //points.push(delaunay.points[i] / 180.0); // longitude
-        //points.push(delaunay.points[i + 1] / 90.0); // latitude
-        let tmp:Vec2_f32 = robinson.project(delaunay.points[i + 1], delaunay.points[i]);
-        points.push( tmp.x_f32 * 2.0); // latitude 
-        points.push( tmp.y_f32 * 2.0); // longitude
-               
-        //DB.positions[i]['x'] = tmp.x_f32;
-        //DB.positions[i]['y'] = tmp.y_f32;
+        points.push(delaunay.points[i + 1]);
+        points.push(delaunay.points[i]);
     }
+    _mapPoints = points;
 
     const triangles: number[] = [];
     for (let i = 0; i < delaunay.triangles.length; i += 3) {
@@ -117,17 +122,19 @@ const initGeography = () => {
         if (geoJsonData.features.some((feature: any) => booleanPointInPolygon(point, feature))) {
             triangles.push(t0, t1, t2);
         }
+        //triangles.push(t0, t1, t2);
     }
 
-    return {
-        points,
-        triangles
-    };
+    _mapTriangleCount = triangles.length;
+    _mapIndexBuffer = createGpuBuffer(_device, triangles, Uint32Array, GPUBufferUsage.INDEX);
+    
+    const projPoints = getProjectedMapPoints();
+    _mapVertexBuffer = createGpuBuffer(_device, projPoints, Float32Array, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);
 }
 
-const createMapBuffers = (points: number[], triangles: number[]) => {
-    _mapIndexBuffer = createGpuBuffer(_device, triangles, Uint32Array, GPUBufferUsage.INDEX);
-    _mapVertexBuffer = createGpuBuffer(_device, points, Float32Array, GPUBufferUsage.VERTEX);
+const updateMapPointBuffer = () => {
+    const projPoints = getProjectedMapPoints();
+    _device.queue.writeBuffer(_mapVertexBuffer, 0, new Float32Array(projPoints));
 }
 
 const createGridBuffer = () => {
@@ -143,17 +150,8 @@ const createGridReadBuffer = () => {
 
 const createPositionBuffer = () => {
     // EQUIRECTANGULAR PROJECTION (formulas taken from here: https://en.wikipedia.org/wiki/Equirectangular_projection)
-    let R:number = 1.0;
-    let phi_1:number = degrees_to_radians(0.0);
-    let phi_0:number = 0.0;
-    let lambda_0:number = 0.0;
-    let robinson = new Robinson(1.0, 1.97, 0.5, 0.5);
     for (let i = 0; i < DB.positions.length; i++) {
-        let lambda = (DB.positions[i]['lon'] + 180.0) / 360.0;
-        let phi = (DB.positions[i]['lat'] + 90.0) / 180.0;
-        DB.positions[i]['x'] = R*(lambda - lambda_0) * Math.cos(phi_1);
-        DB.positions[i]['y'] = R*(phi - phi_0);
-        let tmp:Vec2_f32 = robinson.project(DB.positions[i]['lat'], DB.positions[i]['lon']);
+        let tmp:Vec2_f32 = projectPoint(DB.positions[i]['lat'], DB.positions[i]['lon']);
         DB.positions[i]['x'] = tmp.x_f32;
         DB.positions[i]['y'] = tmp.y_f32;
     }
@@ -278,6 +276,39 @@ const createPipelines = (format: GPUTextureFormat) => {
             topology: "triangle-strip"
         }
     });
+
+    _drawPointsPipeline = _device.createRenderPipeline({
+        layout: 'auto',
+        vertex: {
+            module: _device.createShaderModule({
+                code: vert_points_shader
+            }),
+            entryPoint: "vs_main"
+        },
+        fragment: {
+            module: _device.createShaderModule({
+                code: frag_points_shader
+            }),
+            entryPoint: "fs_main",
+            targets: [{
+                format: format,
+                blend: {
+                    color: {
+                        srcFactor: 'src-alpha',
+                        dstFactor: 'one-minus-src-alpha'
+                    },
+                    alpha: {
+                        srcFactor: 'src-alpha',
+                        dstFactor: 'one-minus-src-alpha'
+                    }
+                }
+            }
+            ]
+        },
+        primitive: {
+            topology: "triangle-strip"
+        }
+    });
 }
 
 const createBindGroups = () => {
@@ -318,7 +349,7 @@ const createBindGroups = () => {
         ]
     });
 
-    _drawPointsGroup = _device.createBindGroup({
+    _drawPointsBindGroup = _device.createBindGroup({
         layout: _drawPointsPipeline.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: { buffer: _uniformBuffer }},
@@ -338,11 +369,14 @@ export const startBenchmark = async () => {
     }
 }
 
-export const renderFrame = async (recreateGridBuffer: boolean = false, recreatePositionBuffer: boolean = false, onlyDrawStage: boolean = false, readBackGridBuffer: boolean = false) => {
+export const renderFrame = async (recreateGridBuffer: boolean = false, recreatePositionBuffer: boolean = false, onlyDrawStage: boolean = false, readBackGridBuffer: boolean = false, updateMapBuffer: boolean = false) => {
     if (!_initialised) return;
 
     if (recreateGridBuffer) {
         createGridBuffer();
+    }
+    if (updateMapBuffer) {
+        updateMapPointBuffer();
     }
     if (recreatePositionBuffer) {
         createPositionBuffer();
@@ -410,7 +444,10 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
     TH.pushTime("rend", Date.now() - start);
 
     if (pointRendering) {
-
+        renderPass.setPipeline(_drawPointsPipeline);
+        renderPass.setBindGroup(0, _drawPointsBindGroup);
+        renderPass.draw(4, DB.positions.length);
+        renderPass.end();
     }
 
 
