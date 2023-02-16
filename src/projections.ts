@@ -5,27 +5,19 @@ import { Vec2_f32 } from "./rendering/vectors";
 
 class Equirectangular {
     
-    R:number = 1.0;
-    phi_1:number = 0.0;
-    phi_0:number = 0.0;
-    lambda_0:number = 0.0;
-
     project(lat:number, lng:number):Vec2_f32 {
         let lambda = lng;
         let phi = lat;
-        //let lambda = (DB.positions[i]['lon'] + 180.0) / 360.0;
-        //let phi = (DB.positions[i]['lat'] + 90.0) / 180.0;
         var point:Vec2_f32 = {
-            x_f32 : ((lambda - this.lambda_0) * Math.cos(degrees_to_radians(this.phi_1)) + 180.0) / 360.0,
-            y_f32 : ((phi - this.phi_0) + 90.0) / 180.0
+            x_f32 : (lambda + 180.0) / 360.0,
+            y_f32 : (phi + 90.0) / 180.0
         };
-        point.x_f32 *= this.R;
-        point.y_f32 *= this.R;
         return point;
     }
+
 }
 
-export class Robinson {
+class Robinson {
 
     mapWidth: number;
     mapHeight: number;
@@ -81,9 +73,65 @@ export class Robinson {
 
 }
 
+class EqualEarth {
+
+    A:Array<number> = [1.340264, -0.081106, 0.000893, 0.003796];
+    bounds = [2.7064373689368044, 1.317362759157413];
+
+    constructor() {
+    }
+
+    project(lat:number, lng:number):Vec2_f32 {
+        let lambda = degrees_to_radians(lng);
+        let phi = degrees_to_radians(lat);
+        let theta = Math.asin(Math.sqrt(3)/2.0*Math.sin(phi));
+        let x = 2*Math.sqrt(3)*lambda*Math.cos(theta) / (3*(9*this.A[3]*theta**8+7*this.A[2]*theta**6+3*this.A[1]*theta**2+this.A[0]));
+        let y = this.A[3]*theta**9+this.A[2]*theta**7+this.A[1]*theta**3+this.A[0]*theta;
+            
+        //create point from robinson function
+        var point:Vec2_f32 = {
+            x_f32 : x / (2*this.bounds[0]) + 0.5,
+            y_f32 : y / (2*this.bounds[1]) + 0.5
+        };
+        
+        return point;
+
+    }
+
+}
+
+class Hammer {
+
+    A:Array<number> = [1.340264, -0.081106, 0.000893, 0.003796];
+    bounds = [2.8280057571023933, 1.4142135623730951];
+
+    constructor() {
+    }
+
+    project(lat:number, lng:number):Vec2_f32 {
+        let lambda = degrees_to_radians(lng);
+        let phi = degrees_to_radians(lat);
+        let theta = Math.asin(Math.sqrt(3)/2.0*Math.sin(phi));
+        let x = (2*Math.sqrt(2)*Math.cos(phi)*Math.sin(lambda/2)) / Math.sqrt(1+Math.cos(phi)*Math.cos(lambda/2));
+        let y = (Math.sqrt(2)*Math.sin(phi)) / Math.sqrt(1+Math.cos(phi)*Math.cos(lambda/2));
+            
+        //create point from robinson function
+        var point:Vec2_f32 = {
+            x_f32 : x / (2*this.bounds[0]) + 0.5,
+            y_f32 : y / (2*this.bounds[1]) + 0.5
+        };
+        
+        return point;
+
+    }
+
+}
+
 var _projectionFunctions:any = {
     "Equirectangular": new Equirectangular(),
     "Robinson": new Robinson(),
+    "EqualEarth": new EqualEarth(),
+    "Hammer": new Hammer()
 }
 
 var _currentProjection:any = _projectionFunctions['Equirectangular'];

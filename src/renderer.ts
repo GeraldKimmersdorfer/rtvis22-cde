@@ -16,9 +16,10 @@ import { DB } from './db';
 import * as ui from './ui';
 import { TH } from './ui';
 
-import geoJsonData from './assets/world.geojson';
+import geoJsonMap from './assets/map.geojson';
+import geoJsonMapBoundries from './assets/map_boundries.geojson';
 import { BlobOptions } from 'buffer';
-import { projectPoint, Robinson } from './projections';
+import { projectPoint } from './projections';
 import { Vec2_f32 } from './rendering/vectors';
 
 require('jquery-ui/ui/widgets/dialog');
@@ -38,6 +39,10 @@ var _minmaxValueBuffer: GPUBuffer;
 var _uniformBuffer: GPUBuffer;
 var _mapIndexBuffer: GPUBuffer;
 var _mapVertexBuffer: GPUBuffer;
+var _mapBoundriesIndexBuffer: GPUBuffer;
+var _mapBoundriesVertexBuffer: GPUBuffer;
+var _mapModelBuffer: GPUBuffer;
+var _mapBoundriesModelBuffer: GPUBuffer;
 
 var _drawMapPipeline: GPURenderPipeline;
 var _drawGridPipeline: GPURenderPipeline;
@@ -46,6 +51,7 @@ var _averagePipeline: GPUComputePipeline;
 var _drawPointsPipeline: GPURenderPipeline;
 
 var _drawMapBindGroup: GPUBindGroup;
+var _drawMapBoundriesBindGroup: GPUBindGroup;
 var _drawGridBindGroup: GPUBindGroup;
 var _aggregateBindGroup: GPUBindGroup;
 var _averageBindGroup: GPUBindGroup;
@@ -54,6 +60,8 @@ var _drawPointsBindGroup: GPUBindGroup;
 var _initialised: boolean = false;
 var _mapTriangleCount: number;
 var _mapPoints: number[];   // lat lon original points of map
+var _mapBoundriesTriangleCount: number;
+var _mapBoundriesPoints: number[];
 
 let AGGREGATE_WORKGROUP_SIZE = 64; // dont forget to change in shader
 let AVERAGE_WORKGROUP_SIZE = 64; // dont forget to change in shader
@@ -67,11 +75,12 @@ export const init = async () => {
     _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
     _adapter = await navigator.gpu?.requestAdapter() as GPUAdapter;
     _device = await _adapter?.requestDevice() as GPUDevice;
-    _context = _canvas.getContext('webgpu', { alpha: false }) as unknown as GPUCanvasContext;
+    _context = _canvas.getContext('webgpu') as unknown as GPUCanvasContext;
     const format: GPUTextureFormat = 'bgra8unorm';
     _context.configure({
         device: _device,
         format: format,
+        alphaMode: "premultiplied"
     });
 
     
@@ -90,18 +99,18 @@ export const init = async () => {
     _initialised = true;
 }
 
-const getProjectedMapPoints = () => {
+const getProjectedPoints = (points:number[]) => {
     const pointsProjected:number[] = [];
-    for (let i = 0; i < _mapPoints.length; i += 2) {
-        let tmp:Vec2_f32 = projectPoint(_mapPoints[i], _mapPoints[i+1]);
+    for (let i = 0; i < points.length; i += 2) {
+        let tmp:Vec2_f32 = projectPoint(points[i], points[i+1]);
         pointsProjected.push( tmp.x_f32 ); // latitude 
         pointsProjected.push( tmp.y_f32 ); // longitude
     }
     return pointsProjected;
 }
 
-const createMapBuffer = () => {
-    const geoData = geoJsonCoords(geoJsonData);
+const triangulateGeoJson = (geojson:any):[number[], number[]] =>  {
+    const geoData = geoJsonCoords(geojson);
     const delaunay = Delaunay.from(geoData);
 
     const points: number[] = [];
@@ -109,8 +118,7 @@ const createMapBuffer = () => {
         points.push(delaunay.points[i + 1]);
         points.push(delaunay.points[i]);
     }
-    _mapPoints = points;
-
+    
     const triangles: number[] = [];
     for (let i = 0; i < delaunay.triangles.length; i += 3) {
         const t0 = delaunay.triangles[i];
@@ -119,22 +127,48 @@ const createMapBuffer = () => {
         const centerX = (delaunay.points[t0 * 2] + delaunay.points[t1 * 2] + delaunay.points[t2 * 2]) / 3.0;
         const centerY = (delaunay.points[t0 * 2 + 1] + delaunay.points[t1 * 2 + 1] + delaunay.points[t2 * 2 + 1]) / 3.0;
         const point = [centerX, centerY];
-        if (geoJsonData.features.some((feature: any) => booleanPointInPolygon(point, feature))) {
+        if (geojson.features.some((feature: any) => booleanPointInPolygon(point, feature))) {
             triangles.push(t0, t1, t2);
         }
-        //triangles.push(t0, t1, t2);
     }
 
+    return [ points, triangles ]
+}
+
+const createMapBuffer = () => {
+    let [points, triangles] = triangulateGeoJson(geoJsonMap);
+    _mapPoints = points;
     _mapTriangleCount = triangles.length;
     _mapIndexBuffer = createGpuBuffer(_device, triangles, Uint32Array, GPUBufferUsage.INDEX);
-    
-    const projPoints = getProjectedMapPoints();
+    let projPoints = getProjectedPoints(_mapPoints);
     _mapVertexBuffer = createGpuBuffer(_device, projPoints, Float32Array, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);
+
+    let [pointsBound, trianglesBound] = triangulateGeoJson(geoJsonMapBoundries);
+    _mapBoundriesPoints = pointsBound;
+    _mapBoundriesTriangleCount = trianglesBound.length;
+    _mapBoundriesIndexBuffer = createGpuBuffer(_device, trianglesBound, Uint32Array, GPUBufferUsage.INDEX);
+    let projPointsBound = getProjectedPoints(_mapBoundriesPoints);
+    
+    /*
+    let x_vals = projPointsBound.filter(function(el, i, a) {
+        return (i % 2 === 0);
+    });
+    let y_vals = projPointsBound.filter(function(el, i, a) {
+        return (i % 2 === 1);
+    });   
+    console.log(Math.min(...x_vals), Math.max(...x_vals)); 
+    console.log(Math.min(...y_vals), Math.max(...y_vals));*/ 
+    _mapBoundriesVertexBuffer = createGpuBuffer(_device, projPointsBound, Float32Array, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);    
+
+    _mapModelBuffer = createGpuBuffer(_device, [120/255,120/255, 120/255, 0.5], Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
+    _mapBoundriesModelBuffer = createGpuBuffer(_device, [21/255, 121/255, 200/255, 0.3], Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
 }
 
 const updateMapPointBuffer = () => {
-    const projPoints = getProjectedMapPoints();
+    let projPoints = getProjectedPoints(_mapPoints);
     _device.queue.writeBuffer(_mapVertexBuffer, 0, new Float32Array(projPoints));
+    let projPointsBound = getProjectedPoints(_mapBoundriesPoints);
+    _device.queue.writeBuffer(_mapBoundriesVertexBuffer, 0, new Float32Array(projPointsBound));
 }
 
 const createGridBuffer = () => {
@@ -230,11 +264,13 @@ const createPipelines = (format: GPUTextureFormat) => {
                 blend: {
                     color: {
                         srcFactor: 'src-alpha',
-                        dstFactor: 'one-minus-src-alpha'
+                        dstFactor: 'one-minus-src-alpha',
+                        operation: 'add'
                     },
                     alpha: {
                         srcFactor: 'src-alpha',
-                        dstFactor: 'one-minus-src-alpha'
+                        dstFactor: 'one-minus-src-alpha',
+                        operation: 'add'
                     }
                 }
             }]
@@ -262,11 +298,13 @@ const createPipelines = (format: GPUTextureFormat) => {
                 blend: {
                     color: {
                         srcFactor: 'src-alpha',
-                        dstFactor: 'one-minus-src-alpha'
+                        dstFactor: 'one-minus-src-alpha',
+                        operation: 'add'
                     },
                     alpha: {
                         srcFactor: 'src-alpha',
-                        dstFactor: 'one-minus-src-alpha'
+                        dstFactor: 'one-minus-src-alpha',
+                        operation: 'add'
                     }
                 }
             }
@@ -336,7 +374,16 @@ const createBindGroups = () => {
     _drawMapBindGroup = _device.createBindGroup({
         layout: _drawMapPipeline.getBindGroupLayout(0),
         entries: [
-            { binding: 0, resource: { buffer: _uniformBuffer } },
+            //{ binding: 0, resource: { buffer: _uniformBuffer } },
+            { binding: 1, resource: { buffer: _mapModelBuffer }}
+        ]
+    });
+
+    _drawMapBoundriesBindGroup = _device.createBindGroup({
+        layout: _drawMapPipeline.getBindGroupLayout(0),
+        entries: [
+            //{ binding: 0, resource: { buffer: _uniformBuffer } },
+            { binding: 1, resource: { buffer: _mapBoundriesModelBuffer }}
         ]
     });
 
@@ -422,16 +469,23 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
         colorAttachments: [{
             view: textureView,
             clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, //background color
-            loadOp: 'clear',
+            loadOp: 'load',
             storeOp: 'store'
         }]
     });
 
     renderPass.setPipeline(_drawMapPipeline);
+
+    renderPass.setBindGroup(0, _drawMapBoundriesBindGroup);
+    renderPass.setVertexBuffer(0, _mapBoundriesVertexBuffer);
+    renderPass.setIndexBuffer(_mapBoundriesIndexBuffer, 'uint32');
+    renderPass.drawIndexed(_mapBoundriesTriangleCount);
+
     renderPass.setBindGroup(0, _drawMapBindGroup);
     renderPass.setVertexBuffer(0, _mapVertexBuffer);
     renderPass.setIndexBuffer(_mapIndexBuffer, 'uint32');
     renderPass.drawIndexed(_mapTriangleCount);
+
 
     renderPass.setPipeline(_drawGridPipeline);
     renderPass.setBindGroup(0, _drawGridBindGroup);

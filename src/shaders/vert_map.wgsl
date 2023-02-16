@@ -23,7 +23,12 @@ struct Uniforms {
     hoverIndex: i32,                // contains the id of the active grid cell
 };
 
+struct ModelData {
+    fillColor: vec4<f32>
+}
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var<uniform> model: ModelData;
 
 @vertex
 fn vs_main(
@@ -32,6 +37,6 @@ fn vs_main(
     var output: Output;
     let pos_transformed:vec2<f32> = (pos - vec2<f32>(0.5, 0.5)) * vec2<f32>(2.0, 2.0);
     output.Position = vec4<f32>(pos_transformed.xy, 0.0, 1.0);
-    output.vColor = uniforms.colorMap;
+    output.vColor = model.fillColor;
     return output;
 }

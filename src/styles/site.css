@@ -166,9 +166,9 @@ h4 {
   }
 
   body.map {
-    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.05) 75%, transparent 75%, transparent);
     height: 50vh;
-    background-color: #697b85;
+    background-color: #000000;
     background-size: 10px 10px;
     animation: progress-bar-stripes 3s linear infinite;
   }
@@ -220,4 +220,12 @@ h4 {
 #nowebgpu a {
   color: #FFFFFF;
   font-style: italic;
+}
+
+.ui-dialog-title {
+  text-align: center;
+}
+.ui-dialog-title .material-symbols-outlined {
+  font-size: 16px;
+  vertical-align: middle;
 }

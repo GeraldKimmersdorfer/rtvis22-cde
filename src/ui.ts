@@ -109,7 +109,7 @@ export const InitUserInterface = () => {
   $( "#pbLoading" ).progressbar({
     value: false
   });
-  $( "#mainMenu" ).dialog({
+  var dialog = $( "#mainMenu" ).dialog({
       position: { my: "left top", at: "left+0 top+0", of: window },
       dialogClass: "no-close",
       autoOpen: false,
@@ -122,7 +122,9 @@ export const InitUserInterface = () => {
         duration: 800
       }
   });
-  $( "#infoMenu" ).dialog({
+  dialog.data( "uiDialog" )._title = function(title:any) { title.html( this.options.title );};
+  dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Settings</span> Configuration');
+  dialog = $( "#infoMenu" ).dialog({
     position: { my: "right top", at: "right top", of: window },
     dialogClass: "no-close",
     autoOpen: false,
@@ -135,6 +137,8 @@ export const InitUserInterface = () => {
       duration: 800
     }
 });
+dialog.data( "uiDialog" )._title = function(title:any) { title.html( this.options.title );};
+dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</span> Information');
   $( "#s-tra" ).slider({
       range: true,
       min: 1800,
