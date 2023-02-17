@@ -1,7 +1,15 @@
 struct Output {
     @builtin(position) Position : vec4<f32>,
     @location(0) vColor : vec4<f32>,
+    @location(1) uv: vec2<f32>
 };
+
+const quad = array<vec2<f32>, 4>(
+	vec2<f32>(-1f, -1f),
+    vec2<f32>(-1f,  1f),
+	vec2<f32>( 1f, -1f),
+    vec2<f32>( 1f,  1f)
+);
 
 struct Uniforms {
 	gridProperties: vec4<f32>,      // hexagon size, vertical space, horizontal space, border
@@ -39,5 +47,16 @@ fn vs_main(
     @builtin(instance_index) instanceIndex: u32
 ) -> Output {
     var output:Output;
+
+    //var size_transformed:vec2<f32> = vec2<f32>(uniforms.gridProperties.x * scale * (1.0 - uniforms.gridProperties.w));
+    var scale:vec2<f32> = vec2<f32>(0.003);
+    scale.x /= f32(uniforms.screenSize.x) / f32(uniforms.screenSize.y);
+    var newPos:vec2<f32> = positions[instanceIndex].position + quad[vertexIndex] * scale;
+    newPos -= 0.5;
+    newPos *= 2.0;
+    output.Position = vec4<f32>(newPos, 0f, 1f);
+    output.vColor = uniforms.colorA;
+    output.uv = quad[vertexIndex];
+
     return output;
 }

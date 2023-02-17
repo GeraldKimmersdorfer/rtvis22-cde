@@ -490,6 +490,13 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
     renderPass.setPipeline(_drawGridPipeline);
     renderPass.setBindGroup(0, _drawGridBindGroup);
     renderPass.draw(6, pointCount);
+    
+    if (pointRendering) {
+        renderPass.setPipeline(_drawPointsPipeline);
+        renderPass.setBindGroup(0, _drawPointsBindGroup);
+        renderPass.draw(4, DB.positions.length);
+    }
+
     renderPass.end();
 
     start = Date.now();
@@ -497,12 +504,7 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
     await _device.queue.onSubmittedWorkDone();
     TH.pushTime("rend", Date.now() - start);
 
-    if (pointRendering) {
-        renderPass.setPipeline(_drawPointsPipeline);
-        renderPass.setBindGroup(0, _drawPointsBindGroup);
-        renderPass.draw(4, DB.positions.length);
-        renderPass.end();
-    }
+
 
 
     if (readBackGridBuffer || recreateGridBuffer) {
