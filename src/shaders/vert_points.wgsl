@@ -26,8 +26,9 @@ struct Uniforms {
     colorB: vec4<f32>,              // color for 0 (if diverging)
     colorC: vec4<f32>,              // color for max values
     colorNull: vec4<f32>,           // color for empty cell
-    colorMap: vec4<f32>,            // color of the map
+    colorPoints: vec4<f32>,         // color of the positions if activated
 
+    sizePoints: f32,                // size of the positions if activated
     hoverIndex: i32,                // contains the id of the active grid cell
 };
 
@@ -47,16 +48,13 @@ fn vs_main(
     @builtin(instance_index) instanceIndex: u32
 ) -> Output {
     var output:Output;
-
-    //var size_transformed:vec2<f32> = vec2<f32>(uniforms.gridProperties.x * scale * (1.0 - uniforms.gridProperties.w));
-    var scale:vec2<f32> = vec2<f32>(0.003);
+    var scale:vec2<f32> = vec2<f32>(uniforms.sizePoints);
     scale.x /= f32(uniforms.screenSize.x) / f32(uniforms.screenSize.y);
     var newPos:vec2<f32> = positions[instanceIndex].position + quad[vertexIndex] * scale;
     newPos -= 0.5;
     newPos *= 2.0;
     output.Position = vec4<f32>(newPos, 0f, 1f);
-    output.vColor = uniforms.colorA;
+    output.vColor = uniforms.colorPoints;
     output.uv = quad[vertexIndex];
-
     return output;
 }

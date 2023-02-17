@@ -23,10 +23,11 @@ export class UniformBuffer {
     colorB: Vec4_f32 = { x_f32: 1.0, y_f32: 1.0, z_f32: 1.0, w_f32: 0.5 };
     colorC: Vec4_f32 = { x_f32: 178.0/255.0, y_f32: 24.0/255.0, z_f32: 43.0/255.0, w_f32: 0.9 };
     colorNull: Vec4_f32 = { x_f32: 1.0, y_f32: 1.0, z_f32: 1.0, w_f32: 0.05 };
-    colorMap: Vec4_f32 = { x_f32: 160.0/255.0, y_f32: 169.0/255.0, z_f32: 174.0/255.0, w_f32: 0.2 };
+    colorPoints: Vec4_f32 = { x_f32: 0/255, y_f32: 255/255, z_f32: 0/255, w_f32: 0.8 };
 
+    sizePoints_f32: number = 0.003;
     hoverIndex_i32: number = 0;
-    buffer3: Vec3_u32 = {x_u32:0,y_u32:0,z_u32:0};
+    buffer2: Vec2_u32 = {x_u32:0,y_u32:0};
 
     constructor() {
         this.set_gridscale(this.gridProperties.scale);

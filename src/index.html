@@ -71,16 +71,28 @@
                 </p>
                 <div id="s-gscale"></div>
                 <p>
+                    <label for="cb-gaspect">Equidistant-Grid</label>
+                    <input type="checkbox" name="cb-gaspect" id="cb-gaspect" checked>
+                </p>
+                <p>
                     Grid-Border <span id="lbl-gborder" class="time-range">0.1</span>
                 </p>
                 <div id="s-gborder"></div>
                 <p>
-                    <label for="cb-gaspect">Equidistant-Grid</label>
-                    <input type="checkbox" name="cb-gaspect" id="cb-gaspect" checked>
+                    <label for="cb-showpoints">Overlay Locations</label>
+                    <input type="checkbox" name="cb-showpoints" id="cb-showpoints">
                 </p>
+                <span id="points-group" style="display: none">
+                    
+                    <p>
+                        Size: <span id="lbl-psize" class="time-range">0.003</span>
+                    </p>
+                    <div id="s-psize"></div>
+                    <p>Color: <input type="text" class="colorpicker uni" id="cp-colpoints" data-pname="colorPoints" value="rgba(0,255,0,0.8)" /></p>
+                </span>
             </div>
 
-            <h3>Color</h3>
+            <h3>Color-Scale</h3>
             <div>
                 <label for="s-colormode" style="line-height: 200%;">Coloring Mode:</label>
                 <select name="s-colormode" id="s-colormode">
@@ -89,16 +101,16 @@
                     <option value=2>Diverging</option>
                     <option value=3 selected>Diverging Symmetrical</option>
                 </select>
-                <p>Color A: <input type="text" class="colorpicker" id="cp-cola" data-uniname="colorA" value="rgba(33,102,172,0.8)" /></p>
+                <p>Color A: <input type="text" class="colorpicker uni" id="cp-cola" data-pname="colorA" value="rgba(33,102,172,0.8)" /></p>
                 <span id="cp-colb-group">
-                    <p>Color B: <input type="text" class="colorpicker" id="cp-colb" data-uniname="colorB" value="rgba(255,255,255,0.5)" /></p>
+                    <p>Color B: <input type="text" class="colorpicker uni" id="cp-colb" data-pname="colorB" value="rgba(255,255,255,0.5)" /></p>
                 </span>
-                <p>Color C: <input type="text" class="colorpicker" id="cp-colc" data-uniname="colorC" value="rgba(178,24,43,0.8)" /></p>
-                <p>Empty Color: <input type="text" class="colorpicker" id="cp-colnull" data-uniname="colorNull" value="rgba(255,255,255,0.05)" /></p>
-                <p>Map Color: <input type="text" class="colorpicker" id="cp-colmap" data-uniname="colorMap" value="rgba(160,169,174,0.2)" /></p>
+                <p>Color C: <input type="text" class="colorpicker uni" id="cp-colc" data-pname="colorC" value="rgba(178,24,43,0.8)" /></p>
+                <p>Empty Color: <input type="text" class="colorpicker uni" id="cp-colnull" data-pname="colorNull" value="rgba(255,255,255,0.05)" /></p>
+                
             </div>
 
-            <h3>Projection</h3>
+            <h3>Map</h3>
             <div>
                 <label for="s-projection" style="line-height: 200%;">Projection Mode:</label>
                 <select name="s-projection" id="s-projection">
@@ -107,6 +119,8 @@
                     <option>EqualEarth</option>
                     <option>Hammer</option>
                 </select>
+                <p>Water-Color: <input type="text" class="colorpicker map" data-pname="water" id="cp-colwat" value="rgba(21,121,200,0.5)" /></p>
+                <p>Contintent-C.: <input type="text" class="colorpicker map" data-pname="continents" id="cp-colmap" value="rgba(120,120,120,0.5)" /></p>
             </div>
         </div>
     </div>

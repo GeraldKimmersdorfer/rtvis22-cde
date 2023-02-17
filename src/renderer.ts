@@ -68,8 +68,13 @@ let AVERAGE_WORKGROUP_SIZE = 64; // dont forget to change in shader
 
 export var uniformBuffer: UniformBuffer = new UniformBuffer();
 export var gridBuffer: GridBuffer = new GridBuffer();
-export var benchmarkEnabled: boolean = false;
-export var pointRendering: boolean = true;
+export var _benchmarkEnabled: boolean = false;
+var _pointRendering:boolean = false;
+export const setPointRenderingEnabled = (state:boolean) => { _pointRendering = state; }
+export var colorsMap:any = {
+    "water": [21/255, 121/255, 200/255, 0.3],
+    "continents": [120/255,120/255, 120/255, 0.5]
+}
 
 export const init = async () => {
     _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
@@ -160,8 +165,8 @@ const createMapBuffer = () => {
     console.log(Math.min(...y_vals), Math.max(...y_vals));*/ 
     _mapBoundriesVertexBuffer = createGpuBuffer(_device, projPointsBound, Float32Array, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);    
 
-    _mapModelBuffer = createGpuBuffer(_device, [120/255,120/255, 120/255, 0.5], Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
-    _mapBoundriesModelBuffer = createGpuBuffer(_device, [21/255, 121/255, 200/255, 0.3], Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
+    _mapModelBuffer = createGpuBuffer(_device, colorsMap.continents, Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
+    _mapBoundriesModelBuffer = createGpuBuffer(_device, colorsMap.water, Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
 }
 
 const updateMapPointBuffer = () => {
@@ -183,7 +188,6 @@ const createGridReadBuffer = () => {
 }
 
 const createPositionBuffer = () => {
-    // EQUIRECTANGULAR PROJECTION (formulas taken from here: https://en.wikipedia.org/wiki/Equirectangular_projection)
     for (let i = 0; i < DB.positions.length; i++) {
         let tmp:Vec2_f32 = projectPoint(DB.positions[i]['lat'], DB.positions[i]['lon']);
         DB.positions[i]['x'] = tmp.x_f32;
@@ -406,12 +410,12 @@ const createBindGroups = () => {
 }
 
 export const stopBenchmark = async () => {
-    benchmarkEnabled = false;
+    _benchmarkEnabled = false;
 }
 
 export const startBenchmark = async () => {
-    benchmarkEnabled = true;
-    while (benchmarkEnabled) {
+    _benchmarkEnabled = true;
+    while (_benchmarkEnabled) {
         await renderFrame(false, false, false, true);
     }
 }
@@ -432,8 +436,10 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
         createBindGroups();
     }
 
-    // Update uniform buffer:
+    // Update uniform buffer and model color buffer:
     _device.queue.writeBuffer(_uniformBuffer, 0, uniformBuffer.get_buffer());
+    _device.queue.writeBuffer(_mapModelBuffer, 0, new Float32Array(colorsMap.continents));
+    _device.queue.writeBuffer(_mapBoundriesModelBuffer, 0, new Float32Array(colorsMap.water));
     let pointCount = uniformBuffer.get_pointcount();
 
     var commandEncoder: GPUCommandEncoder;
@@ -491,7 +497,7 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
     renderPass.setBindGroup(0, _drawGridBindGroup);
     renderPass.draw(6, pointCount);
     
-    if (pointRendering) {
+    if (_pointRendering) {
         renderPass.setPipeline(_drawPointsPipeline);
         renderPass.setBindGroup(0, _drawPointsBindGroup);
         renderPass.draw(4, DB.positions.length);

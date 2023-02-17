@@ -199,6 +199,20 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
         renderer.renderFrame(false, false, true);
       }
     });
+
+    $( "#s-psize" ).slider({
+      min: 1,
+      max: 500,
+      value: 30,
+      slide: function( _event: any, ui: any ) {
+        $( "#lbl-psize" ).html((ui.value / 10000).toString());
+      }
+    }).on("slidestop", (e:any, ui:any) => {
+      renderer.uniformBuffer.sizePoints_f32 = ui.value / 10000;
+      renderer.renderFrame(true);
+    });
+
+
     $("#s-compare").selectmenu({
       change: function( event: any, data: any ) {
         renderer.uniformBuffer.monthComparison_i32 = +data.item.value;
@@ -221,11 +235,16 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
       colorFormat: "RGBA",
       select: (event:any, data:any) => {
         let $itm = $(event.target);
-        console.log($(event.target));
-        let ub:any = renderer.uniformBuffer;
-        ub[$itm.data("uniname")] = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a };
+        let name = $itm.data("pname");
+        let color = { x_f32: data.rgb.r, y_f32: data.rgb.g, z_f32: data.rgb.b, w_f32: data.a }
+        if ($itm.hasClass("uni")) {
+          let ub:any = renderer.uniformBuffer;
+          ub[name] = color;
+        } else if ($itm.hasClass("map")) {
+          renderer.colorsMap[name] = Object.values(color);
+        }
         renderer.renderFrame(false, false, true).then(refreshLegend);
-        $itm.css("background", colToString(ub[$itm.data("uniname")]));
+        $itm.css("background", colToString(color));
       }
     }).each(function() {
       $(this).css("background", $(this).attr("value") || "none");
@@ -236,12 +255,20 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
       renderer.uniformBuffer.set_respect_aspect($(event.target).is(":checked"));
       renderer.renderFrame(true);
     });
+    ($("#cb-showpoints") as any).checkboxradio({
+      icon: true
+    }).on("change", (event:any) => {
+      let val = $(event.target).is(":checked");
+      renderer.setPointRenderingEnabled(val);
+      renderer.renderFrame(true);
+      $("#points-group").toggle(200);
+    });
     $("#mainMenuAccordion,#infoMenuAccordion").accordion({
       heightStyle: "content",
       collapsible: true
     });
     $("#but-benchmark").on("click", function() {
-      if (renderer.benchmarkEnabled) {
+      if (renderer._benchmarkEnabled) {
         renderer.stopBenchmark();
         $(this).html("Start benchmark");
       } else {

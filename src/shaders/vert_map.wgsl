@@ -4,7 +4,7 @@ struct Output {
 };
 
 struct Uniforms {
-    gridProperties: vec4<f32>,      // hexagon size, vertical space, horizontal space, border
+	gridProperties: vec4<f32>,      // hexagon size, vertical space, horizontal space, border
     screenSize: vec2<u32>,          // the size of the viewport
     gridResolution: vec2<u32>,      // resolution of the grid
 
@@ -14,12 +14,13 @@ struct Uniforms {
 
     gridAspect: u32,                // 1 if grid should respect viewport aspect ratio
     colorMode: u32,                 // 0...sequential, 1...diverging
-    colorA: vec4<f32>,              // color for max values
+    colorA: vec4<f32>,              // color for min values
     colorB: vec4<f32>,              // color for 0 (if diverging)
-    colorC: vec4<f32>,              // color for min values
+    colorC: vec4<f32>,              // color for max values
     colorNull: vec4<f32>,           // color for empty cell
-    colorMap: vec4<f32>,            // color of the map
+    colorPoints: vec4<f32>,         // color of the positions if activated
 
+    sizePoints: f32,                // size of the positions if activated
     hoverIndex: i32,                // contains the id of the active grid cell
 };
 

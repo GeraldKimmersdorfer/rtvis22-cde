@@ -18,8 +18,9 @@ struct Uniforms {
     colorB: vec4<f32>,              // color for 0 (if diverging)
     colorC: vec4<f32>,              // color for max values
     colorNull: vec4<f32>,           // color for empty cell
-    colorMap: vec4<f32>,            // color of the map
+    colorPoints: vec4<f32>,         // color of the positions if activated
 
+    sizePoints: f32,                // size of the positions if activated
     hoverIndex: i32,                // contains the id of the active grid cell
 };
  
