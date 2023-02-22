@@ -11,7 +11,7 @@ import * as geoJsonCoords from '@mapbox/geojson-coords';
 import { Delaunay } from 'd3-delaunay';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { createEmptyGPUBuffer, createGpuBuffer, degrees_to_radians } from './helper'
-import { GridBuffer, UniformBuffer } from './rendering/buffer';
+import { GridBuffer, KdPositionBuffer, UniformBuffer } from './rendering/buffer';
 import { DB } from './db';
 import * as ui from './ui';
 import { TH } from './ui';
@@ -43,6 +43,7 @@ var _mapBoundriesIndexBuffer: GPUBuffer;
 var _mapBoundriesVertexBuffer: GPUBuffer;
 var _mapModelBuffer: GPUBuffer;
 var _mapBoundriesModelBuffer: GPUBuffer;
+var _kdPositionBuffer: GPUBuffer;
 
 var _drawMapPipeline: GPURenderPipeline;
 var _drawGridPipeline: GPURenderPipeline;
@@ -68,6 +69,8 @@ let AVERAGE_WORKGROUP_SIZE = 64; // dont forget to change in shader
 
 export var uniformBuffer: UniformBuffer = new UniformBuffer();
 export var gridBuffer: GridBuffer = new GridBuffer();
+export var kdPositionBuffer: KdPositionBuffer = new KdPositionBuffer();
+
 export var _benchmarkEnabled: boolean = false;
 var _pointRendering:boolean = false;
 export const setPointRenderingEnabled = (state:boolean) => { _pointRendering = state; }
@@ -203,6 +206,9 @@ const createPositionBuffer = () => {
         pabView.setInt32(i * 16 + 12, DB.positions[i]['id_max'], true);
     }
     _positionBuffer = createGpuBuffer(_device, positionsArrayBuffer, Uint8Array, GPUBufferUsage.STORAGE);
+
+    kdPositionBuffer.from_data(DB);
+    _kdPositionBuffer = createGpuBuffer(_device, kdPositionBuffer.get_buffer(), Uint8Array, GPUBufferUsage.STORAGE);
 }
 
 const createTemperatureBuffer = () => {
@@ -361,7 +367,8 @@ const createBindGroups = () => {
             { binding: 1, resource: { buffer: _gridBuffer } },
             { binding: 2, resource: { buffer: _positionBuffer } },
             { binding: 3, resource: { buffer: _temperatureBuffer } },
-            { binding: 4, resource: { buffer: _workgroupBoundsBuffer }}
+            { binding: 4, resource: { buffer: _workgroupBoundsBuffer } },
+            { binding: 5, resource: { buffer: _kdPositionBuffer } }
         ]
     });
 

@@ -146,6 +146,7 @@ const unbinData = (data: ArrayBuffer) => {
           ui.loadingDialogProgress(lastReportedProgress);
         }
     }
+
     let speed = formatMilliseconds(performance.now() - _bufferTime);
     ui.loadingDialogAddHistory(`Read ${(db.temperatures.length/1000000).toFixed(2)}M entries @ ${db.positions.length} locations [${speed}]`);
 

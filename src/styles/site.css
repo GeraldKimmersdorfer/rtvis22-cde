@@ -230,7 +230,7 @@ h4 {
   vertical-align: middle;
 }
 
-.ui-checkboxradio-label, .ui-selectmenu-button, .ui-button {
+.ui-checkboxradio-label, .ui-selectmenu-button {
   width: 100% !important;
   box-sizing: border-box;
 }

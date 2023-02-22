@@ -64,3 +64,9 @@ export const degrees_to_radians = (degrees:number) : number => {
 export const radians_to_degrees = (radians:number) : number => {
     return radians * (180.0/Math.PI);
 }
+
+export const euclid_distance = (a:any, b:any) : number => {
+    let dx = a.x-b.x;
+    let dy = a.y-b.y;
+    return dx*dx + dy*dy;
+}

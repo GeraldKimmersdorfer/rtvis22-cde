@@ -1,4 +1,7 @@
+const kd = require('../../node_modules/kd-tree-javascript/kdTree-min.js')
+
 import { Database, DB } from "../db";
+import { euclid_distance } from "../helper";
 import { Vec2_u32, Vec4_u32, Vec4_f32, Vec3_u32 } from "./vectors";
 
 
@@ -187,6 +190,68 @@ export class GridBuffer {
         ret.g_empty = this.data.length - ret.g_filled;
         ret.avg /= ret.g_filled;
         return ret;
+    }
+
+}
+
+interface KdPositionEntry {
+    x: number,
+    y: number,
+    left: number,
+    right: number,
+    
+    id_min: number,
+    id_max: number,
+}
+
+export class KdPositionBuffer {
+
+    data:KdPositionEntry[] = [];
+
+    _append_kd_node_to_list(lst:KdPositionEntry[], node:any):number {
+        if (node !== undefined &&  node !== null) {
+            lst.push({
+                x: node.obj.x,
+                y: node.obj.y,
+                left: -1,
+                right: -1,
+                id_min: node.obj.id_min,
+                id_max: node.obj.id_max,
+            })
+            let ci = lst.length - 1;
+            lst[ci].left = this._append_kd_node_to_list(lst, node.left);
+            lst[ci].right = this._append_kd_node_to_list(lst, node.right);
+            return ci;
+        } else {
+            return -1;
+        }
+    }
+
+    from_data(db:Database) {
+        var tree = new kd.kdTree(db.positions, euclid_distance, ["x", "y"]);
+        var tdata:KdPositionEntry[] = [];
+        this._append_kd_node_to_list(tdata, tree.root);
+        console.log(tdata)
+        this.data = tdata;
+    }
+
+    get_size(): number {
+        return 6*4*this.data.length; // 2xfloat + 4xuint32 per entry
+    }
+
+    get_buffer(): ArrayBuffer {
+        const arrayBuffer = new ArrayBuffer(this.get_size()); 
+        const datView = new DataView(arrayBuffer);
+        for (let i = 0; i < this.data.length; i++) {
+            let itm = this.data[i];
+            datView.setFloat32(i * 24, itm['x'], true);
+            datView.setFloat32(i * 24 + 4, itm['y'], true);
+            datView.setInt32(i * 24 + 8, itm['left'], true);
+            datView.setInt32(i * 24 + 12, itm['right'], true)
+            datView.setUint32(i * 24 + 16, itm['id_min'], true);
+            datView.setUint32(i * 24 + 20, itm['id_max'], true);
+        }
+        return arrayBuffer;
     }
 
 }
