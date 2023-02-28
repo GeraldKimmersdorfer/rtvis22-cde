@@ -34,7 +34,9 @@ struct Uniforms {
 
 struct PositionEntry {
     position: vec2<f32>,            // the precalculated x and y position
-    index_bounds: vec2<u32>         // min and max id inside temperaturelist, (requires temperaturelist sorted by pid)
+    index_bounds: vec2<u32>,        // min and max id inside temperaturelist, (requires temperaturelist sorted by pid)
+    avgvalues: vec2<f32>,           // contains the average value for the given time ranges as outputed by the aggregation step
+    nvalues: vec2<u32>              // contains the amount of values taken into account for the avgvalue as written by the aggregation step
 }
 
 

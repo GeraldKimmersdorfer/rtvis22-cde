@@ -2,7 +2,7 @@ const kd = require('../../node_modules/kd-tree-javascript/kdTree-min.js')
 
 import { Database, DB } from "../db";
 import { euclid_distance } from "../helper";
-import { Vec2_u32, Vec4_u32, Vec4_f32, Vec3_u32 } from "./vectors";
+import { Vec2_u32, Vec4_u32, Vec4_f32, Vec3_u32, Vec2_f32 } from "./vectors";
 
 
 
@@ -30,7 +30,12 @@ export class UniformBuffer {
 
     sizePoints_f32: number = 0.003;
     hoverIndex_i32: number = 0;
-    buffer2: Vec2_u32 = {x_u32:0,y_u32:0};
+
+    temperatureBounds: Vec2_f32 = {x_f32:0.0, y_f32:0.0};
+
+    useKdTreeImplementation_u32: number = 0;
+    
+    buff3: Vec3_u32 = {x_u32:0, y_u32:0, z_u32:0};
 
     constructor() {
         this.set_gridscale(this.gridProperties.scale);
@@ -38,6 +43,7 @@ export class UniformBuffer {
 
     refresh_db_properties(db:Database) {
         this.firstMonthIndex_i32 = db.bounds_date.min.getMonth();
+        this.temperatureBounds = { x_f32: db.bounds_avgt.min, y_f32: db.bounds_avgt.max }
     }
 
     set_gridscale(scale: number) {
@@ -106,6 +112,10 @@ export class UniformBuffer {
     set_respect_aspect(val: boolean) {
         this.gridAspect_u32 = val ? 1 : 0;
         this.recalculate_grid();
+    }
+
+    set_usekdtree(val: boolean) {
+        this.useKdTreeImplementation_u32 = val ? 1 : 0;
     }
 
     get_pointcount():number {
@@ -200,8 +210,7 @@ interface KdPositionEntry {
     left: number,
     right: number,
     
-    id_min: number,
-    id_max: number,
+    id: number
 }
 
 export class KdPositionBuffer {
@@ -215,8 +224,7 @@ export class KdPositionBuffer {
                 y: node.obj.y,
                 left: -1,
                 right: -1,
-                id_min: node.obj.id_min,
-                id_max: node.obj.id_max,
+                id: node.obj.id,
             })
             let ci = lst.length - 1;
             lst[ci].left = this._append_kd_node_to_list(lst, node.left);
@@ -228,7 +236,11 @@ export class KdPositionBuffer {
     }
 
     from_data(db:Database) {
-        var tree = new kd.kdTree(db.positions, euclid_distance, ["x", "y"]);
+        let pos_modified:any = db.positions;
+        for (var i = 0; i < pos_modified.length; i++) {
+            pos_modified[i]['id'] = i;
+        }
+        var tree = new kd.kdTree(pos_modified, euclid_distance, ["x", "y"]);
         var tdata:KdPositionEntry[] = [];
         this._append_kd_node_to_list(tdata, tree.root);
         this.data = tdata;
@@ -246,9 +258,8 @@ export class KdPositionBuffer {
             datView.setFloat32(i * 24, itm['x'], true);
             datView.setFloat32(i * 24 + 4, itm['y'], true);
             datView.setInt32(i * 24 + 8, itm['left'], true);
-            datView.setInt32(i * 24 + 12, itm['right'], true)
-            datView.setUint32(i * 24 + 16, itm['id_min'], true);
-            datView.setUint32(i * 24 + 20, itm['id_max'], true);
+            datView.setInt32(i * 24 + 12, itm['right'], true);
+            datView.setUint32(i * 24 + 16, itm['id'], true);
         }
         return arrayBuffer;
     }

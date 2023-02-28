@@ -70,3 +70,12 @@ export const euclid_distance = (a:any, b:any) : number => {
     let dy = a.y-b.y;
     return dx*dx + dy*dy;
 }
+
+export const dec2bin = (dec:number):string => {
+    return (dec >>> 0).toString(2);
+}
+
+export const discretize = (val:number, valmin:number, valmax:number, omax:number):number => {
+    let p = (val - valmin) / (valmax - valmin);
+    return Math.round(p * omax);
+}

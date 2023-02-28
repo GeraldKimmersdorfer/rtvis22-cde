@@ -9,9 +9,9 @@ import rend_points_shader from './shaders/rend_points.wgsl';
 import * as geoJsonCoords from '@mapbox/geojson-coords';
 import { Delaunay } from 'd3-delaunay';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
-import { createEmptyGPUBuffer, createGpuBuffer, degrees_to_radians } from './helper'
+import { createEmptyGPUBuffer, createGpuBuffer, dec2bin, degrees_to_radians, discretize } from './helper'
 import { GridBuffer, KdPositionBuffer, UniformBuffer } from './rendering/buffer';
-import { DB } from './db';
+import { Database, DB } from './db';
 import * as ui from './ui';
 import { TH } from './ui';
 
@@ -219,13 +219,26 @@ const createPositionBuffer = () => {
     _kdPositionBuffer = createGpuBuffer(_device, kdPositionBuffer.get_buffer(), Uint8Array, GPUBufferUsage.STORAGE);
 }
 
+const maxu16 = 2**16-1;
+const packTemperatureEntry = (t:Database["temperatures"][0]):number => {
+    if (t.dm >= 2**15 || t.src >= 2**1) {
+        console.error("DM or src is out of bounds. Visualization will not be accurate!");
+        t.dm = 2**15 -1;
+        t.src = 0;
+    }
+    let dm = t.dm << 17;
+    let src = t.src << 16;
+    let tdis = discretize(t.avgt, DB.bounds_avgt.min, DB.bounds_avgt.max, maxu16);
+    return dm | src | tdis;
+}
+
+
 const createTemperatureBuffer = () => {
-    const temperaturesArrayBuffer = new ArrayBuffer(DB.temperatures.length * 3 * 4);
+    const temperaturesArrayBuffer = new ArrayBuffer(DB.temperatures.length * 1 * 4);
     const tabView = new DataView(temperaturesArrayBuffer);
     for (let i = 0; i < DB.temperatures.length; i++) {
-        tabView.setUint32(i * 12, DB.temperatures[i].dm, true);
-        tabView.setFloat32(i * 12 + 4, DB.temperatures[i].avgt, true);
-        tabView.setUint32(i * 12 + 8, DB.temperatures[i].src, true);
+        let t = DB.temperatures[i];
+        tabView.setUint32(i * 4, packTemperatureEntry(t), true);
     }
     _temperatureBuffer = createGpuBuffer(_device, temperaturesArrayBuffer, Uint8Array, GPUBufferUsage.STORAGE);
 }
@@ -393,7 +406,6 @@ const createBindGroups = () => {
             { binding: 0, resource: { buffer: _uniformBuffer } },
             { binding: 1, resource: { buffer: _gridBuffer } },
             { binding: 2, resource: { buffer: _positionBuffer } },
-            { binding: 3, resource: { buffer: _temperatureBuffer } },
             { binding: 4, resource: { buffer: _workgroupBoundsBuffer } },
             { binding: 5, resource: { buffer: _kdPositionBuffer } }
         ]
@@ -402,10 +414,10 @@ const createBindGroups = () => {
     _minMaxBindGroup = _device.createBindGroup({
         layout: _minMaxPipeline.getBindGroupLayout(0),
         entries: [
-            //{ binding: 0, resource: { buffer: _uniformBuffer } },
+            { binding: 0, resource: { buffer: _uniformBuffer } },
             //{ binding: 1, resource: { buffer: _gridBuffer } },
-            { binding: 0, resource: { buffer: _minmaxValueBuffer } },
-            { binding: 1, resource: { buffer: _workgroupBoundsBuffer }}
+            { binding: 2, resource: { buffer: _minmaxValueBuffer } },
+            { binding: 3, resource: { buffer: _workgroupBoundsBuffer }}
         ]
     });
 

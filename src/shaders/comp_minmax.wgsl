@@ -18,6 +18,10 @@ struct Uniforms {
 
     sizePoints: f32,                // size of the positions if activated
     hoverIndex: i32,                // contains the id of the active grid cell
+
+    temperatureBounds: vec2<f32>,   // contains minTemp und maxTemp from the whole dataset (for discretization)
+
+    useKdTreeImplementation: u32,   // 1 if kd tree should be used. (On this data a little bit slower, with more points maybe faster?)
 };
 
 struct GridEntry {
@@ -26,25 +30,23 @@ struct GridEntry {
     valueN: u32
 }
 
-const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-1000.0, 1000.0);
 const MINMAX_WORKGROUP_SIZE:u32 = 64;
 const MAX_U32:f32 = 4294967295.0;
 
-//@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 //@group(0) @binding(1) var<storage, read_write> grid: array<GridEntry>; // todo not necessary
-@group(0) @binding(0) var<storage, read_write> minmaxvalues: vec4<f32>;
-@group(0) @binding(1) var<storage, read> workgroupBounds: array<vec2<f32>>;
+@group(0) @binding(2) var<storage, read_write> minmaxvalues: vec4<f32>;
+@group(0) @binding(3) var<storage, read> workgroupBounds: array<vec2<f32>>;
 
 var<workgroup> sharedIntMax:atomic<u32>;
 var<workgroup> sharedIntMin:atomic<u32>;
 var<workgroup> sharedCount:atomic<u32>;
 
-// We discretize linearly between ATOMIC_FLOAT_DIS_BOUNDS and hope that no avg temperature will be outside oO
 fn f32_to_u32(val:f32) -> u32 {
-    return u32((val - ATOMIC_FLOAT_DIS_BOUNDS.x) / (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) * MAX_U32);
+    return u32((val - uniforms.temperatureBounds.x) / (uniforms.temperatureBounds.y - uniforms.temperatureBounds.x) * MAX_U32);
 }
 fn u32_to_f32(val:u32) -> f32 {
-    return f32(val) / MAX_U32 * (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) + ATOMIC_FLOAT_DIS_BOUNDS.x;
+    return f32(val) / MAX_U32 * (uniforms.temperatureBounds.y - uniforms.temperatureBounds.x) + uniforms.temperatureBounds.x;
 }
 
 @compute @workgroup_size(MINMAX_WORKGROUP_SIZE)

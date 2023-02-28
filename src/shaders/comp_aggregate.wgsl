@@ -18,6 +18,10 @@ struct Uniforms {
 
     sizePoints: f32,                // size of the positions if activated
     hoverIndex: i32,                // contains the id of the active grid cell
+
+    temperatureBounds: vec2<f32>,   // contains minTemp und maxTemp from the whole dataset (for discretization)
+
+    useKdTreeImplementation: u32,   // 1 if kd tree should be used. (On this data a little bit slower, with more points maybe faster?)
 };
 
 struct PositionEntry {
@@ -37,8 +41,21 @@ const AGGREGATE_WORKGROUP_SIZE:u32 = 64;
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(2) var<storage, read_write> positions: array<PositionEntry>;
-@group(0) @binding(3) var<storage, read> temperatures: array<TemperatureEntry>;
+@group(0) @binding(3) var<storage, read> packedTemperatures: array<u32>;
 
+
+fn undiscretize(disval:f32, valmin:f32, valmax:f32, dismax:f32) -> f32 {
+    return ( disval / dismax ) * ( valmax - valmin ) + valmin;
+}
+
+fn unpack_temperature_entry(pt:u32) -> TemperatureEntry {
+    var o:TemperatureEntry;
+    o.avgt = f32(pt & 65535); // discrete value
+    o.avgt = undiscretize(o.avgt, uniforms.temperatureBounds.x, uniforms.temperatureBounds.y, 65535);
+    o.src = (pt >> 16) & 1;
+    o.dm = (pt >> 17) & 32767;
+    return o;
+}
 
 @compute @workgroup_size(AGGREGATE_WORKGROUP_SIZE)
 fn cs_main(
@@ -53,7 +70,7 @@ fn cs_main(
         p.nvalues = vec2<u32>(0,0);
         p.avgvalues = vec2<f32>(0.0, 0.0);
         for (var k:u32=p.index_bounds[0]; k <= p.index_bounds[1]; k++) {
-            let t:TemperatureEntry = temperatures[k];
+            let t:TemperatureEntry = unpack_temperature_entry(packedTemperatures[k]);
             if (uniforms.monthComparison > -1) {
                 if ((t.dm + uniforms.firstMonthIndex) % 12 != u32(uniforms.monthComparison)) {
                     continue;

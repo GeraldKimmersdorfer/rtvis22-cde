@@ -18,6 +18,10 @@ struct Uniforms {
 
     sizePoints: f32,                // size of the positions if activated
     hoverIndex: i32,                // contains the id of the active grid cell
+
+    temperatureBounds: vec2<f32>,   // contains minTemp und maxTemp from the whole dataset (for discretization)
+
+    useKdTreeImplementation: u32,   // 1 if kd tree should be used. (On this data a little bit slower, with more points maybe faster?)
 };
 
 struct PositionEntry {
@@ -31,7 +35,8 @@ struct KdPositionEntry {
     position: vec2<f32>,
     left: i32,
     right: i32,
-    index_bounds: vec2<u32>
+    pid: u32,                       // Index inside position list
+    buff: u32,  // weirdly necessary, instead crash...
 }
 
 struct TemperatureEntry {
@@ -61,7 +66,6 @@ const MAX_U32:f32 = 4294967295.0;
 /* NOTE: I had to figure out the hardway that compute shaders can't write in an array<vec3<f32>>... */
 @group(0) @binding(1) var<storage, read_write> grid: array<GridEntry>;
 @group(0) @binding(2) var<storage, read> positions: array<PositionEntry>;
-@group(0) @binding(3) var<storage, read> temperatures: array<TemperatureEntry>;
 @group(0) @binding(4) var<storage, read_write> workgroupBounds: array<vec2<f32>>;
 @group(0) @binding(5) var<storage, read> kdPositions: array<KdPositionEntry>;
 
@@ -69,18 +73,40 @@ var<workgroup> sharedIntMax:atomic<u32>;
 var<workgroup> sharedIntMin:atomic<u32>;
 var<workgroup> sharedN:atomic<u32>;
 
-fn pos_inside_circle(pos:vec2<f32>, circle_middle:vec2<f32>, circle_radius:f32) -> bool {
+// Adapted from here: https://stackoverflow.com/questions/5193331/is-a-point-inside-regular-hexagon
+fn pos_inside_hexagon(pos:vec2<f32>, hex_middle:vec2<f32>, hex_outerradius:f32) -> bool {
+    let x = (pos.x - hex_middle.x) / hex_outerradius;
+    let y = (pos.y - hex_middle.y) / hex_outerradius;
 
-    return (distance(pos, circle_middle) < circle_radius);
+    // Check length (squared) against inner and outer radius
+    let l2 = x * x + y * y;
+    if (l2 > 1.0f) {
+        return false;
+    }
+    if (l2 < 0.75f) {
+        return true; // (sqrt(3)/2)^2 = 3/4
+    }
+
+    // Check against borders
+    let px = x * 1.15470053838f; // 2/sqrt(3)
+    if (px > 1.0f || px < -1.0f) {
+        return false;
+    }
+    let py = 0.5f * px + y;
+    if (py > 1.0f || py < -1.0f) {
+        return false;
+    }
+    if (px - py > 1.0f || px - py < -1.0f) {
+        return false;
+    }
+    return true;
 }
 
-
-// We discretize linearly between ATOMIC_FLOAT_DIS_BOUNDS and hope that no avg temperature will be outside oO
 fn f32_to_u32(val:f32) -> u32 {
-    return u32((val - ATOMIC_FLOAT_DIS_BOUNDS.x) / (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) * MAX_U32);
+    return u32((val - uniforms.temperatureBounds.x) / (uniforms.temperatureBounds.y - uniforms.temperatureBounds.x) * MAX_U32);
 }
 fn u32_to_f32(val:u32) -> f32 {
-    return f32(val) / MAX_U32 * (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) + ATOMIC_FLOAT_DIS_BOUNDS.x;
+    return f32(val) / MAX_U32 * (uniforms.temperatureBounds.y - uniforms.temperatureBounds.x) + uniforms.temperatureBounds.x;
 }
 
 @compute @workgroup_size(BINNING_WORKGROUP_SIZE)
@@ -121,8 +147,6 @@ fn cs_main(
     var debugVal: f32 = -1.0;   // overwrites val if > 0
     var tempSum: vec2<f32> = vec2<f32>(0.0, 0.0);
     var tempN: vec2<u32> = vec2<u32>(0, 0);
-    // ToDo: Use kd-tree or quadtree to speed up things!
-    var node = kdPositions[0];
 
     // In order to take into account that the hexagons might be distorted we'll stretch the points accordingly such that
     // we can check with a simple circle again
@@ -131,19 +155,21 @@ fn cs_main(
         distord.x = f32(uniforms.screenSize.x) / f32(uniforms.screenSize.y);
     }
     let middlePointPosDis = mPointPos * distord;
-    if (true) {
+
+    if (uniforms.useKdTreeImplementation == 0) {
         // NON KD TREE IMPLEMENTATION
         for (var j:u32=0; j < posN; j++) {
             let p:PositionEntry = positions[j];
             // ToDo: Collision should be checked with hexagon not with circle (we have possible overlaps right now)
             // Note: To make it faster we could first check with outer circle to completely discard positions before doing the fine check
-            if (pos_inside_circle(p.position * distord, middlePointPosDis, uniforms.gridProperties.x)) {
+            if (pos_inside_hexagon(p.position * distord, middlePointPosDis, uniforms.gridProperties.x)) {
                 tempSum += p.avgvalues;
                 tempN += p.nvalues;
             }
         }  
     } else {
         // KD TREE IMPLEMENTATION
+        var node = kdPositions[0];
         let hexagonsize = uniforms.gridProperties.x;
         let xoffset = sqrt(3.0) * hexagonsize / 2.0;
         let hexagonAABB:Rectangle = Rectangle(middlePointPosDis.x-xoffset,middlePointPosDis.y-hexagonsize,middlePointPosDis.x+xoffset,middlePointPosDis.y+hexagonsize);
@@ -178,23 +204,18 @@ fn cs_main(
             }
             if (ignoreBranch.x == false && ignoreBranch.y == false) {
                 // In this case check whether its a hit and go down left and right subtree
-                if (pos_inside_circle(pointPosDis, middlePointPosDis, uniforms.gridProperties.x)) {
-                    for (var k:u32=node.index_bounds[0]; k <= node.index_bounds[1]; k++) {
-                        let t:TemperatureEntry = temperatures[k];
-                        if (uniforms.monthComparison > -1) {
-                            if ((t.dm + uniforms.firstMonthIndex) % 12 != u32(uniforms.monthComparison)) {
-                                continue;
-                            }
-                        }
-                        if (t.dm >= time_range_bounds[0] && t.dm <= time_range_bounds[1]) {
-                            tempSum.x += t.avgt;
-                            tempN.x += 1;
-                        }
-                        if (t.dm >= time_range_bounds[2] && t.dm <= time_range_bounds[3]) {
-                            tempSum.y += t.avgt;
-                            tempN.y += 1;
-                        }
-                    }  
+                if (pos_inside_hexagon(pointPosDis, middlePointPosDis, uniforms.gridProperties.x)) {
+                    // ToDo get p with index inside node!
+                    //tempSum += p.avgvalues;
+                    //tempN += p.nvalues; 
+                    let pid = node.pid;
+                    if (pid >= posN || pid < 0) {
+                        debugVal = 6000;
+                    } else {
+                        let p:PositionEntry = positions[node.pid];
+                        tempSum += p.avgvalues;
+                        tempN += p.nvalues;
+                    }
                 }
             }
 
@@ -207,12 +228,8 @@ fn cs_main(
             }
             if (ignoreBranch.y == false && node.right > 0) {
                 if (nextNodeFound) {
-                    // ToDo: Add a queue
                     if (queue_index < QUEUE_SIZE - 1) {
                         queue_index += 1;
-                        //if (queue_index > queue_index_max) {
-                            //queue_index_max = queue_index;
-                        //}
                         queue_dim[queue_index] = nextDim;
                         queue_indices[queue_index] = node.right;
                     } else {

@@ -253,6 +253,13 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
       renderer.uniformBuffer.set_respect_aspect($(event.target).is(":checked"));
       renderer.renderFrame(renderer.BufferFlags.UPDATE_GRID_BUFFER, renderer.RenderFlags.STAGE_BINNING_MINMAX);
     });
+    ($("#cb-kdtree") as any).checkboxradio({
+      icon: true
+    }).on("change", (event:any) => {
+      renderer.uniformBuffer.set_usekdtree($(event.target).is(":checked"))
+      renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_BINNING_MINMAX);
+    });
+
     ($("#cb-showpoints") as any).checkboxradio({
       icon: true
     }).on("change", (event:any) => {
