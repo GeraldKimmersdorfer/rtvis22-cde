@@ -27,7 +27,7 @@ struct GridEntry {
 }
 
 const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-1000.0, 1000.0);
-const AVERAGE_WORKGROUP_SIZE:u32 = 64;
+const MINMAX_WORKGROUP_SIZE:u32 = 64;
 const MAX_U32:f32 = 4294967295.0;
 
 //@group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -47,17 +47,17 @@ fn u32_to_f32(val:u32) -> f32 {
     return f32(val) / MAX_U32 * (ATOMIC_FLOAT_DIS_BOUNDS.y - ATOMIC_FLOAT_DIS_BOUNDS.x) + ATOMIC_FLOAT_DIS_BOUNDS.x;
 }
 
-@compute @workgroup_size(AVERAGE_WORKGROUP_SIZE)
+@compute @workgroup_size(MINMAX_WORKGROUP_SIZE)
 fn cs_main(
     @builtin(local_invocation_index) localId: u32, // Current index inside the workgroup
 ) {
     let N: u32 = arrayLength(&workgroupBounds);
-    // We have one workgroup with AVERAGE_WORKGROUP_SIZE threads available so lets do this as follows:
-    /// STEP 1: Get min/max of every i+AVERAGE_WORKGROUP_SIZE*x item:
+    // We have one workgroup with MINMAX_WORKGROUP_SIZE threads available so lets do this as follows:
+    /// STEP 1: Get min/max of every i+MINMAX_WORKGROUP_SIZE*x item:
     var minVal:f32 = 1000.0;
     var maxVal:f32 = -1000.0;
     var cnt:u32 = 0;
-    for (var i:u32=localId; i < N; i+=AVERAGE_WORKGROUP_SIZE) {
+    for (var i:u32=localId; i < N; i+=MINMAX_WORKGROUP_SIZE) {
         let cwb = workgroupBounds[i];
         if ((cwb.y - cwb.x) < 1000) { // Sanity check: if > 1000 probably no value in whole workgroup
             minVal = min(minVal, cwb.x);

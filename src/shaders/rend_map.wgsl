@@ -41,3 +41,8 @@ fn vs_main(
     output.vColor = model.fillColor;
     return output;
 }
+
+@fragment
+fn fs_main(@location(0) vColor: vec4<f32>) -> @location(0) vec4<f32> {
+    return vColor;
+}

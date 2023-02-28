@@ -1,11 +1,10 @@
-import vert_map_shader from './shaders/vert_map.wgsl';
-import frag_map_shader from './shaders/frag_map.wgsl';
-import vert_grid_shader from './shaders/vert_grid.wgsl';
-import frag_grid_shader from './shaders/frag_grid.wgsl';
+
+import rend_map_shader from './shaders/rend_map.wgsl';
+import rend_grid_shader from './shaders/rend_grid.wgsl';
+import comp_binning_shader from './shaders/comp_binning.wgsl';
 import comp_aggregate_shader from './shaders/comp_aggregate.wgsl';
-import comp_average_shader from './shaders/comp_average.wgsl';
-import vert_points_shader from './shaders/vert_points.wgsl';
-import frag_points_shader from './shaders/frag_points.wgsl';
+import comp_minmax_shader from './shaders/comp_minmax.wgsl';
+import rend_points_shader from './shaders/rend_points.wgsl';
 
 import * as geoJsonCoords from '@mapbox/geojson-coords';
 import { Delaunay } from 'd3-delaunay';
@@ -21,6 +20,7 @@ import geoJsonMapBoundries from './assets/map_boundries.geojson';
 import { BlobOptions } from 'buffer';
 import { projectPoint } from './projections';
 import { Vec2_f32 } from './rendering/vectors';
+import { buffer } from 'stream/consumers';
 
 require('jquery-ui/ui/widgets/dialog');
 
@@ -46,26 +46,34 @@ var _mapBoundriesModelBuffer: GPUBuffer;
 var _kdPositionBuffer: GPUBuffer;
 
 var _drawMapPipeline: GPURenderPipeline;
-var _drawGridPipeline: GPURenderPipeline;
-var _aggregatePipeline: GPUComputePipeline;
-var _averagePipeline: GPUComputePipeline;
 var _drawPointsPipeline: GPURenderPipeline;
+var _drawGridPipeline: GPURenderPipeline;
+
+var _aggregatePipeline: GPUComputePipeline;
+var _binningPipeline: GPUComputePipeline;
+var _minMaxPipeline: GPUComputePipeline;
+
 
 var _drawMapBindGroup: GPUBindGroup;
 var _drawMapBoundriesBindGroup: GPUBindGroup;
 var _drawGridBindGroup: GPUBindGroup;
-var _aggregateBindGroup: GPUBindGroup;
-var _averageBindGroup: GPUBindGroup;
 var _drawPointsBindGroup: GPUBindGroup;
 
+var _aggregateBindGroup: GPUBindGroup;
+var _binningBindGroup: GPUBindGroup;
+var _minMaxBindGroup: GPUBindGroup;
+
+
 var _initialised: boolean = false;
+var _frameInFlight: boolean = false;
 var _mapTriangleCount: number;
 var _mapPoints: number[];   // lat lon original points of map
 var _mapBoundriesTriangleCount: number;
 var _mapBoundriesPoints: number[];
 
 let AGGREGATE_WORKGROUP_SIZE = 64; // dont forget to change in shader
-let AVERAGE_WORKGROUP_SIZE = 64; // dont forget to change in shader
+let BINNING_WORKGROUP_SIZE = 64; // dont forget to change in shader
+let MINMAX_WORKGROUP_SIZE = 64; // dont forget to change in shader
 
 export var uniformBuffer: UniformBuffer = new UniformBuffer();
 export var gridBuffer: GridBuffer = new GridBuffer();
@@ -183,7 +191,7 @@ const createGridBuffer = () => {
     uniformBuffer.set_screensize(_canvas.width, _canvas.height);
     let pointCount = uniformBuffer.get_pointcount();
     _gridBuffer = createEmptyGPUBuffer(_device, pointCount * 4 * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC);
-    _workgroupBoundsBuffer = createEmptyGPUBuffer(_device, Math.ceil(pointCount / AGGREGATE_WORKGROUP_SIZE) * 4 * 2 , GPUBufferUsage.STORAGE);
+    _workgroupBoundsBuffer = createEmptyGPUBuffer(_device, Math.ceil(pointCount / BINNING_WORKGROUP_SIZE) * 4 * 2 , GPUBufferUsage.STORAGE);
 }
 
 const createGridReadBuffer = () => {
@@ -197,13 +205,13 @@ const createPositionBuffer = () => {
         DB.positions[i]['y'] = tmp.y_f32;
     }
 
-    const positionsArrayBuffer = new ArrayBuffer(DB.positions.length * 4 * 4);
+    const positionsArrayBuffer = new ArrayBuffer(DB.positions.length * 4 * 8);
     const pabView = new DataView(positionsArrayBuffer);
     for (let i = 0; i < DB.positions.length; i++) {
-        pabView.setFloat32(i * 16, DB.positions[i]['x'], true);
-        pabView.setFloat32(i * 16 + 4, DB.positions[i]['y'], true);
-        pabView.setInt32(i * 16 + 8, DB.positions[i]['id_min'], true);
-        pabView.setInt32(i * 16 + 12, DB.positions[i]['id_max'], true);
+        pabView.setFloat32(i * 32, DB.positions[i]['x'], true);
+        pabView.setFloat32(i * 32 + 4, DB.positions[i]['y'], true);
+        pabView.setInt32(i * 32 + 8, DB.positions[i]['id_min'], true);
+        pabView.setInt32(i * 32 + 12, DB.positions[i]['id_max'], true);
     }
     _positionBuffer = createGpuBuffer(_device, positionsArrayBuffer, Uint8Array, GPUBufferUsage.STORAGE);
 
@@ -233,11 +241,21 @@ const createPipelines = (format: GPUTextureFormat) => {
         }
     });
 
-    _averagePipeline = _device.createComputePipeline({
+    _binningPipeline = _device.createComputePipeline({
         layout: "auto",
         compute: {
             module: _device.createShaderModule({
-                code: comp_average_shader
+                code: comp_binning_shader
+            }),
+            entryPoint: "cs_main",
+        }
+    });
+
+    _minMaxPipeline = _device.createComputePipeline({
+        layout: "auto",
+        compute: {
+            module: _device.createShaderModule({
+                code: comp_minmax_shader
             }),
             entryPoint: "cs_main"
         }
@@ -247,7 +265,7 @@ const createPipelines = (format: GPUTextureFormat) => {
         layout: 'auto',
         vertex: {
             module: _device.createShaderModule({
-                code: vert_map_shader
+                code: rend_map_shader
             }),
             entryPoint: "vs_main",
             buffers: [
@@ -266,7 +284,7 @@ const createPipelines = (format: GPUTextureFormat) => {
 
         fragment: {
             module: _device.createShaderModule({
-                code: frag_map_shader
+                code: rend_map_shader
             }),
             entryPoint: "fs_main",
             targets: [{
@@ -294,13 +312,13 @@ const createPipelines = (format: GPUTextureFormat) => {
         layout: 'auto',
         vertex: {
             module: _device.createShaderModule({
-                code: vert_grid_shader
+                code: rend_grid_shader
             }),
             entryPoint: "vs_main"
         },
         fragment: {
             module: _device.createShaderModule({
-                code: frag_grid_shader
+                code: rend_grid_shader
             }),
             entryPoint: "fs_main",
             targets: [{
@@ -329,13 +347,13 @@ const createPipelines = (format: GPUTextureFormat) => {
         layout: 'auto',
         vertex: {
             module: _device.createShaderModule({
-                code: vert_points_shader
+                code: rend_points_shader
             }),
             entryPoint: "vs_main"
         },
         fragment: {
             module: _device.createShaderModule({
-                code: frag_points_shader
+                code: rend_points_shader
             }),
             entryPoint: "fs_main",
             targets: [{
@@ -364,6 +382,15 @@ const createBindGroups = () => {
         layout: _aggregatePipeline.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: { buffer: _uniformBuffer } },
+            { binding: 2, resource: { buffer: _positionBuffer } },
+            { binding: 3, resource: { buffer: _temperatureBuffer } }
+        ]
+    });
+
+    _binningBindGroup = _device.createBindGroup({
+        layout: _binningPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: _uniformBuffer } },
             { binding: 1, resource: { buffer: _gridBuffer } },
             { binding: 2, resource: { buffer: _positionBuffer } },
             { binding: 3, resource: { buffer: _temperatureBuffer } },
@@ -372,8 +399,8 @@ const createBindGroups = () => {
         ]
     });
 
-    _averageBindGroup = _device.createBindGroup({
-        layout: _averagePipeline.getBindGroupLayout(0),
+    _minMaxBindGroup = _device.createBindGroup({
+        layout: _minMaxPipeline.getBindGroupLayout(0),
         entries: [
             //{ binding: 0, resource: { buffer: _uniformBuffer } },
             //{ binding: 1, resource: { buffer: _gridBuffer } },
@@ -423,23 +450,40 @@ export const stopBenchmark = async () => {
 export const startBenchmark = async () => {
     _benchmarkEnabled = true;
     while (_benchmarkEnabled) {
-        await renderFrame(false, false, false, true);
+        await renderFrame(BufferFlags.NONE, RenderFlags.STAGE_AGGREGATE);
     }
 }
 
-export const renderFrame = async (recreateGridBuffer: boolean = false, recreatePositionBuffer: boolean = false, onlyDrawStage: boolean = false, readBackGridBuffer: boolean = false, updateMapBuffer: boolean = false) => {
-    if (!_initialised) return;
+export enum BufferFlags {
+    NONE = 0,
+    UPDATE_MAP_BUFFER = 1 << 0,
+    UPDATE_GRID_BUFFER = 1 << 1,
+    UPDATE_POSITION_BUFFER = 1 << 2,
+}
 
-    if (recreateGridBuffer) {
+export enum RenderFlags {
+    NONE = 0,
+    STAGE_RENDERING = 1 << 0,
+    STAGE_WRITEBACK = 1 << 1,
+    STAGE_BINNING_MINMAX = 1 << 2,
+    STAGE_AGGREGATE = 1 << 3,
+}
+
+export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderflags:number = RenderFlags.STAGE_RENDERING) => {
+    if (!_initialised) return;
+    if (_frameInFlight) return;
+    _frameInFlight = true;
+
+    if ((bufferflags & BufferFlags.UPDATE_GRID_BUFFER) !== 0) {
         createGridBuffer();
     }
-    if (updateMapBuffer) {
+    if ((bufferflags & BufferFlags.UPDATE_MAP_BUFFER) !== 0) {
         updateMapPointBuffer();
     }
-    if (recreatePositionBuffer) {
+    if ((bufferflags & BufferFlags.UPDATE_POSITION_BUFFER) !== 0) {
         createPositionBuffer();
     }
-    if (recreateGridBuffer || recreatePositionBuffer) {
+    if (bufferflags >= BufferFlags.UPDATE_GRID_BUFFER) {
         createBindGroups();
     }
 
@@ -450,77 +494,92 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
     let pointCount = uniformBuffer.get_pointcount();
 
     var commandEncoder: GPUCommandEncoder;
-    if (!onlyDrawStage) {
+    var start:number;
+
+    if (renderflags >= RenderFlags.STAGE_AGGREGATE) {
         commandEncoder = _device.createCommandEncoder();
         const aggregatePass = commandEncoder.beginComputePass();
         aggregatePass.setPipeline(_aggregatePipeline);
         aggregatePass.setBindGroup(0, _aggregateBindGroup);
-        aggregatePass.dispatchWorkgroups(Math.ceil(pointCount / AGGREGATE_WORKGROUP_SIZE));
+        aggregatePass.dispatchWorkgroups(Math.ceil(DB.positions.length / AGGREGATE_WORKGROUP_SIZE));
         aggregatePass.end();
 
-        var start = Date.now();
+        start = Date.now();
         _device.queue.submit([commandEncoder.finish()]);
         await _device.queue.onSubmittedWorkDone();
-        TH.pushTime("agg", Date.now() - start);
+        TH.pushTime("agg", Date.now() - start);       
+    }
+
+    if (renderflags >= RenderFlags.STAGE_BINNING_MINMAX) {
+        commandEncoder = _device.createCommandEncoder();
+        const binningPass = commandEncoder.beginComputePass();
+        binningPass.setPipeline(_binningPipeline);
+        binningPass.setBindGroup(0, _binningBindGroup);
+        binningPass.dispatchWorkgroups(Math.ceil(pointCount / BINNING_WORKGROUP_SIZE));
+        binningPass.end();
+
+        start = Date.now();
+        _device.queue.submit([commandEncoder.finish()]);
+        await _device.queue.onSubmittedWorkDone();
+        TH.pushTime("bin", Date.now() - start);
 
         commandEncoder = _device.createCommandEncoder();
         const avgPass = commandEncoder.beginComputePass();
-        avgPass.setPipeline(_averagePipeline);
-        avgPass.setBindGroup(0, _averageBindGroup);
+        avgPass.setPipeline(_minMaxPipeline);
+        avgPass.setBindGroup(0, _minMaxBindGroup);
         avgPass.dispatchWorkgroups(1);
         avgPass.end();
 
         start = Date.now();
         _device.queue.submit([commandEncoder.finish()]);
         await _device.queue.onSubmittedWorkDone();
-        TH.pushTime("avg", Date.now() - start);
+        TH.pushTime("minmax", Date.now() - start);
     }
 
-    commandEncoder = _device.createCommandEncoder();
-    const textureView = _context.getCurrentTexture().createView();
-    const renderPass = commandEncoder.beginRenderPass({
-        colorAttachments: [{
-            view: textureView,
-            clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, //background color
-            loadOp: 'load',
-            storeOp: 'store'
-        }]
-    });
+    if (renderflags >= RenderFlags.STAGE_RENDERING) {
+        commandEncoder = _device.createCommandEncoder();
+        const textureView = _context.getCurrentTexture().createView();
+        const renderPass = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: textureView,
+                clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, //background color
+                loadOp: 'load',
+                storeOp: 'store'
+            }]
+        });
 
-    renderPass.setPipeline(_drawMapPipeline);
+        renderPass.setPipeline(_drawMapPipeline);
 
-    renderPass.setBindGroup(0, _drawMapBoundriesBindGroup);
-    renderPass.setVertexBuffer(0, _mapBoundriesVertexBuffer);
-    renderPass.setIndexBuffer(_mapBoundriesIndexBuffer, 'uint32');
-    renderPass.drawIndexed(_mapBoundriesTriangleCount);
+        renderPass.setBindGroup(0, _drawMapBoundriesBindGroup);
+        renderPass.setVertexBuffer(0, _mapBoundriesVertexBuffer);
+        renderPass.setIndexBuffer(_mapBoundriesIndexBuffer, 'uint32');
+        renderPass.drawIndexed(_mapBoundriesTriangleCount);
 
-    renderPass.setBindGroup(0, _drawMapBindGroup);
-    renderPass.setVertexBuffer(0, _mapVertexBuffer);
-    renderPass.setIndexBuffer(_mapIndexBuffer, 'uint32');
-    renderPass.drawIndexed(_mapTriangleCount);
+        renderPass.setBindGroup(0, _drawMapBindGroup);
+        renderPass.setVertexBuffer(0, _mapVertexBuffer);
+        renderPass.setIndexBuffer(_mapIndexBuffer, 'uint32');
+        renderPass.drawIndexed(_mapTriangleCount);
 
 
-    renderPass.setPipeline(_drawGridPipeline);
-    renderPass.setBindGroup(0, _drawGridBindGroup);
-    renderPass.draw(6, pointCount);
-    
-    if (_pointRendering) {
-        renderPass.setPipeline(_drawPointsPipeline);
-        renderPass.setBindGroup(0, _drawPointsBindGroup);
-        renderPass.draw(4, DB.positions.length);
+        renderPass.setPipeline(_drawGridPipeline);
+        renderPass.setBindGroup(0, _drawGridBindGroup);
+        renderPass.draw(6, pointCount);
+        
+        if (_pointRendering) {
+            renderPass.setPipeline(_drawPointsPipeline);
+            renderPass.setBindGroup(0, _drawPointsBindGroup);
+            renderPass.draw(4, DB.positions.length);
+        }
+
+        renderPass.end();
+
+        start = Date.now();
+        _device.queue.submit([commandEncoder.finish()]);
+        await _device.queue.onSubmittedWorkDone();
+        TH.pushTime("rend", Date.now() - start);
     }
 
-    renderPass.end();
-
-    start = Date.now();
-    _device.queue.submit([commandEncoder.finish()]);
-    await _device.queue.onSubmittedWorkDone();
-    TH.pushTime("rend", Date.now() - start);
-
-
-
-
-    if (readBackGridBuffer || recreateGridBuffer) {
+    if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
         // Create readback buffer:
         createGridReadBuffer();
 
@@ -534,6 +593,8 @@ export const renderFrame = async (recreateGridBuffer: boolean = false, recreateP
         gridBuffer.from_buffer(copyArrayBuffer);
         ui.refreshGraphInformation(gridBuffer);
     }
+
+    _frameInFlight = false;
 
 }
 

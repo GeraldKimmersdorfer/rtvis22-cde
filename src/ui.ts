@@ -34,7 +34,8 @@ class ComputeTimeHolder {
   constructor() {
       this.frameTimes = {
         agg: { name: "Aggregate", vals: []},
-        avg: { name: "Averaging", vals: []},
+        bin: { name: "Binning", vals: []},
+        minmax: { name: "MinMax", vals: []},
         rend: { name: "Rendering", vals: []},
         wback: { name: "WriteBack", vals: []}
       }
@@ -70,7 +71,7 @@ const keyDownHandler = (e:any) => {
     if (hoverEnabled) {
       hoverEnabled = false;
       renderer.uniformBuffer.hoverIndex_i32 = -1;
-      renderer.renderFrame(false, false, true);
+      renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_RENDERING);
       $("#tooltip").clearQueue().fadeTo(200, 0);
     } else {
       hoverEnabled = true;
@@ -154,7 +155,7 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
         $( "#lbl-tra" ).html(ui.values[ 0 ] + " - " + ui.values[ 1 ] );
       }
     }).on("slidestop", (e:any, ui:any) => {
-      renderer.renderFrame(false, false, false, true);
+      renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE);
     });
     $( "#s-trb" ).slider({
       range: true,
@@ -172,8 +173,7 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
         $( "#lbl-trb" ).html(ui.values[ 0 ] + " - " + ui.values[ 1 ] );
       }
     }).on("slidestop", (e:any, ui:any) => {
-      console.log(renderer.uniformBuffer.timeRangeBounds);
-      renderer.renderFrame(false, false, false, true);
+      renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE);
     });
 
     $( "#s-gscale" ).slider({
@@ -182,10 +182,9 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
       value: 10,
       slide: function( _event: any, ui: any ) {
         $( "#lbl-gscale" ).html((ui.value / 1000).toString());
+        renderer.uniformBuffer.set_gridscale(ui.value / 1000);
+        renderer.renderFrame(renderer.BufferFlags.UPDATE_GRID_BUFFER, renderer.RenderFlags.STAGE_BINNING_MINMAX);
       }
-    }).on("slidestop", (e:any, ui:any) => {
-      renderer.uniformBuffer.set_gridscale(ui.value / 1000);
-      renderer.renderFrame(true);
     });
 
     $( "#s-gborder" ).slider({
@@ -196,7 +195,7 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
         let newValue = ui.value / 100;
         $( "#lbl-gborder" ).html(newValue.toString());
         renderer.uniformBuffer.gridProperties.border = newValue;
-        renderer.renderFrame(false, false, true);
+        renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_RENDERING);
       }
     });
 
@@ -206,17 +205,16 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
       value: 30,
       slide: function( _event: any, ui: any ) {
         $( "#lbl-psize" ).html((ui.value / 10000).toString());
+        renderer.uniformBuffer.sizePoints_f32 = ui.value / 10000;
+        renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_RENDERING);
       }
-    }).on("slidestop", (e:any, ui:any) => {
-      renderer.uniformBuffer.sizePoints_f32 = ui.value / 10000;
-      renderer.renderFrame(true);
     });
 
 
     $("#s-compare").selectmenu({
       change: function( event: any, data: any ) {
         renderer.uniformBuffer.monthComparison_i32 = +data.item.value;
-        renderer.renderFrame(false, false, false, true);
+        renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE);
       }
     });
     $("#s-colormode").selectmenu({
@@ -227,7 +225,7 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
         } else {
           $("#cp-colb-group").show();
         }
-        renderer.renderFrame(false, false, true).then(refreshLegend);
+        renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_RENDERING).then(refreshLegend);
       }
     });
     $(".colorpicker").colorpicker({
@@ -243,7 +241,7 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
         } else if ($itm.hasClass("map")) {
           renderer.colorsMap[name] = Object.values(color);
         }
-        renderer.renderFrame(false, false, true).then(refreshLegend);
+        renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_RENDERING).then(refreshLegend);
         $itm.css("background", colToString(color));
       }
     }).each(function() {
@@ -253,14 +251,14 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
       icon: true
     }).on("change", (event:any) => {
       renderer.uniformBuffer.set_respect_aspect($(event.target).is(":checked"));
-      renderer.renderFrame(true);
+      renderer.renderFrame(renderer.BufferFlags.UPDATE_GRID_BUFFER, renderer.RenderFlags.STAGE_BINNING_MINMAX);
     });
     ($("#cb-showpoints") as any).checkboxradio({
       icon: true
     }).on("change", (event:any) => {
       let val = $(event.target).is(":checked");
       renderer.setPointRenderingEnabled(val);
-      renderer.renderFrame(true);
+      renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_RENDERING);
       $("#points-group").toggle(200);
     });
     $("#mainMenuAccordion,#infoMenuAccordion").accordion({
@@ -274,7 +272,6 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
       } else {
         $(this).html("Stop benchmark");
         renderer.startBenchmark();
-        
       }
     });
 
@@ -292,7 +289,7 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
           $("#lbl-curval").html(gridData.value.toFixed(5) + " °C");
           $("#lbl-curn").html(gridData.valueN.toFixed(0));
           $("#lbl-curcoord").html(hc.col.toFixed(0) + " | " + hc.row.toFixed(0) + " (" + hc.i + ")");
-          renderer.renderFrame(false, false, true);
+          renderer.renderFrame((renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_RENDERING));
         }
       }
     };
@@ -302,7 +299,7 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
       if (hoverEnabled) {
         delayHideTimer = setTimeout(() => {
           renderer.uniformBuffer.hoverIndex_i32 = -1;
-          renderer.renderFrame(false, false, true);
+          renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_RENDERING);
           $("#tooltip").clearQueue().fadeTo(200, 0);
         }, 1);
       }
@@ -314,7 +311,7 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
     $("#s-projection").selectmenu({
       change: function( event: any, data: any ) {
         setCurrentProjection(data.item.value);
-        renderer.renderFrame(true, true, false, true, true);
+        renderer.renderFrame(renderer.BufferFlags.UPDATE_GRID_BUFFER | renderer.BufferFlags.UPDATE_MAP_BUFFER | renderer.BufferFlags.UPDATE_POSITION_BUFFER, renderer.RenderFlags.STAGE_AGGREGATE);
       }
     });
 

@@ -231,7 +231,6 @@ export class KdPositionBuffer {
         var tree = new kd.kdTree(db.positions, euclid_distance, ["x", "y"]);
         var tdata:KdPositionEntry[] = [];
         this._append_kd_node_to_list(tdata, tree.root);
-        console.log(tdata)
         this.data = tdata;
     }
 

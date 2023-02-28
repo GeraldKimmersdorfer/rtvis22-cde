@@ -23,10 +23,9 @@ const main = () => {
 
     ui.loadingDialogProgress(0.5);
     fetchAndUnpackData(function on_success(db:Database) {
-        //console.log(db);
         ui.initWithData();
         renderer.init().then(() => {
-            renderer.renderFrame(false,false,false,true).then(() => {
+            renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE).then(() => {
                 ui.loadingDialogSuccess("We're all set and ready");
                 ui.showMainMenu();
                 ui.showInfoMenu();
@@ -38,7 +37,7 @@ const main = () => {
         var doitdelayed:number;
         window.addEventListener('resize', function(){
             this.clearTimeout(doitdelayed);
-            doitdelayed = this.setTimeout(() => { renderer.renderFrame(true); }, 100);
+            doitdelayed = this.setTimeout(() => { renderer.renderFrame(renderer.BufferFlags.UPDATE_GRID_BUFFER, renderer.RenderFlags.STAGE_BINNING_MINMAX); }, 100);
         });
     }, function on_failure(msg:string) {
         ui.loadingDialogError(msg);
