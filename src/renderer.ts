@@ -472,9 +472,30 @@ export enum RenderFlags {
     STAGE_AGGREGATE = 1 << 3,
 }
 
+var queuedFrame:null|{
+    bufferflags: BufferFlags,
+    renderflags: RenderFlags
+} = null;
+
+var executingQueuedFrame:boolean = false;
+
 export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderflags:number = RenderFlags.STAGE_RENDERING) => {
     if (!_initialised) return;
-    if (_frameInFlight) return;
+    if (_frameInFlight && !_benchmarkEnabled) {
+        // In a few scenarios we can not just discard the frame. (e.g. buffer change) Lets queue it and merge with other queued ones.
+        if (queuedFrame) {
+            queuedFrame = {
+                bufferflags: queuedFrame.bufferflags | bufferflags,
+                renderflags: queuedFrame.renderflags | renderflags
+            };
+        } else {
+            queuedFrame = {
+                bufferflags: bufferflags,
+                renderflags: renderflags
+            };
+        }
+        return;
+    }
     _frameInFlight = true;
 
     if ((bufferflags & BufferFlags.UPDATE_GRID_BUFFER) !== 0) {
@@ -598,6 +619,11 @@ export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderf
     }
 
     _frameInFlight = false;
-
+    if (queuedFrame && !executingQueuedFrame) {
+        executingQueuedFrame = true;
+        renderFrame(queuedFrame.bufferflags, queuedFrame.renderflags);
+        queuedFrame = null;
+        executingQueuedFrame = false;
+    }
 }
 
