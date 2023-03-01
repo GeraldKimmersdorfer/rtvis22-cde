@@ -58,9 +58,9 @@ struct Rectangle {
     top: f32
 }
 
-const ATOMIC_FLOAT_DIS_BOUNDS:vec2<f32> = vec2<f32>(-1000.0, 1000.0);
 const BINNING_WORKGROUP_SIZE:u32 = 64;
 const MAX_U32:f32 = 4294967295.0;
+const KDTRAVERSAL_QUEUE_SIZE = 10;
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 /* NOTE: I had to figure out the hardway that compute shaders can't write in an array<vec3<f32>>... */
@@ -137,8 +137,8 @@ fn cs_main(
 
     /// ================================================================================
     /// AGGREGATE VALUES
-    /// The most important step: Aggregate all temperature values inside the given time_
-    /// range and the current cell position.
+    /// The most important step: Aggregate all temperature values inside the current 
+    /// cell position.
     /// ================================================================================
     var val = 0.0;
     var valN:u32 = 0;
@@ -175,9 +175,9 @@ fn cs_main(
         let hexagonAABB:Rectangle = Rectangle(middlePointPosDis.x-xoffset,middlePointPosDis.y-hexagonsize,middlePointPosDis.x+xoffset,middlePointPosDis.y+hexagonsize);
         var curDim:i32 = 1;    // 1 = x, 2 = y
         var ignoreBranch:vec2<bool>;
-        const QUEUE_SIZE = 10;
-        var queue_indices:array<i32, QUEUE_SIZE>;
-        var queue_dim:array<i32, QUEUE_SIZE>;
+        
+        var queue_indices:array<i32, KDTRAVERSAL_QUEUE_SIZE>;
+        var queue_dim:array<i32, KDTRAVERSAL_QUEUE_SIZE>;
         var queue_index:i32 = -1;
         //var queue_index_max:i32 = 0;
         loop {
@@ -205,11 +205,9 @@ fn cs_main(
             if (ignoreBranch.x == false && ignoreBranch.y == false) {
                 // In this case check whether its a hit and go down left and right subtree
                 if (pos_inside_hexagon(pointPosDis, middlePointPosDis, uniforms.gridProperties.x)) {
-                    // ToDo get p with index inside node!
-                    //tempSum += p.avgvalues;
-                    //tempN += p.nvalues; 
                     let pid = node.pid;
                     if (pid >= posN || pid < 0) {
+                        // Not good: kd tree wrongly formed. pid has to be inside the range of the position array
                         debugVal = 6000;
                     } else {
                         let p:PositionEntry = positions[node.pid];
@@ -228,21 +226,22 @@ fn cs_main(
             }
             if (ignoreBranch.y == false && node.right > 0) {
                 if (nextNodeFound) {
-                    if (queue_index < QUEUE_SIZE - 1) {
+                    // We can't process this branch now so add it to the queue
+                    if (queue_index < KDTRAVERSAL_QUEUE_SIZE - 1) {
                         queue_index += 1;
                         queue_dim[queue_index] = nextDim;
                         queue_indices[queue_index] = node.right;
                     } else {
-                        debugVal += 2000.0; // Not good! In this case we have to increase the size of the queue
+                        // Not good! In this case we have to increase the size of the queue
+                        // ToDo Handle Error
                     }
-                    
                 } else {
                     nextNode = kdPositions[node.right];
                     nextNodeFound = true;
                 }
             }
             if (!nextNodeFound) {
-                // Get from queue, if queue empty exit
+                // Get next node from queue, if queue empty exit
                 if (queue_index < 0) {
                     break;
                 } else {
@@ -255,7 +254,6 @@ fn cs_main(
                 curDim = nextDim;
             }
         }
-
     }
 
     if (tempN.x > 0 && tempN.y > 0) { // Check for divbyzero error (no entry in given time range and position)
@@ -263,9 +261,7 @@ fn cs_main(
         val = tempAvg[1] - tempAvg[0];
         valN = tempN.x + tempN.y;
     }
-    if (debugVal > 0) {
-        val = debugVal + 100;
-    }
+
     /// ================================================================================
     /// GET MIN/MAX PER WORKGROUP
     /// The following calculates the min/max values per workgroup and writes it into the

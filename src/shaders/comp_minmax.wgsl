@@ -61,7 +61,7 @@ fn cs_main(
     var cnt:u32 = 0;
     for (var i:u32=localId; i < N; i+=MINMAX_WORKGROUP_SIZE) {
         let cwb = workgroupBounds[i];
-        if ((cwb.y - cwb.x) < 1000) { // Sanity check: if > 1000 probably no value in whole workgroup
+        if ((cwb.y - cwb.x) < 1000) { // Sanity check: if > 1000 probably no value in whole workgroup (gets set by binning stage)
             minVal = min(minVal, cwb.x);
             maxVal = max(maxVal, cwb.y);
             cnt += 1;

@@ -22,6 +22,10 @@ struct Uniforms {
 
     sizePoints: f32,                // size of the positions if activated
     hoverIndex: i32,                // contains the id of the active grid cell
+
+    temperatureBounds: vec2<f32>,   // contains minTemp und maxTemp from the whole dataset (for discretization)
+
+    useKdTreeImplementation: u32,   // 1 if kd tree should be used. (On this data a little bit slower, with more points maybe faster?)
 };
  
 struct GridEntry {

@@ -71,9 +71,9 @@ var _mapPoints: number[];   // lat lon original points of map
 var _mapBoundriesTriangleCount: number;
 var _mapBoundriesPoints: number[];
 
-let AGGREGATE_WORKGROUP_SIZE = 64; // dont forget to change in shader
-let BINNING_WORKGROUP_SIZE = 64; // dont forget to change in shader
-let MINMAX_WORKGROUP_SIZE = 64; // dont forget to change in shader
+const AGGREGATE_WORKGROUP_SIZE = 64; // dont forget to change in shader
+const BINNING_WORKGROUP_SIZE = 64; // dont forget to change in shader
+const MINMAX_WORKGROUP_SIZE = 64; // dont forget to change in shader
 
 export var uniformBuffer: UniformBuffer = new UniformBuffer();
 export var gridBuffer: GridBuffer = new GridBuffer();
@@ -103,6 +103,7 @@ export const init = async () => {
     // Create Buffer
     uniformBuffer.refresh_db_properties(DB);
     _uniformBuffer = createGpuBuffer(_device, uniformBuffer.get_buffer(), Uint8Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
+    
     createMapBuffer();
     createGridBuffer();
     createPositionBuffer();
@@ -164,16 +165,6 @@ const createMapBuffer = () => {
     _mapBoundriesTriangleCount = trianglesBound.length;
     _mapBoundriesIndexBuffer = createGpuBuffer(_device, trianglesBound, Uint32Array, GPUBufferUsage.INDEX);
     let projPointsBound = getProjectedPoints(_mapBoundriesPoints);
-    
-    /*
-    let x_vals = projPointsBound.filter(function(el, i, a) {
-        return (i % 2 === 0);
-    });
-    let y_vals = projPointsBound.filter(function(el, i, a) {
-        return (i % 2 === 1);
-    });   
-    console.log(Math.min(...x_vals), Math.max(...x_vals)); 
-    console.log(Math.min(...y_vals), Math.max(...y_vals));*/ 
     _mapBoundriesVertexBuffer = createGpuBuffer(_device, projPointsBound, Float32Array, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);    
 
     _mapModelBuffer = createGpuBuffer(_device, colorsMap.continents, Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
