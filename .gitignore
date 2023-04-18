@@ -1,5 +1,6 @@
 node_modules
-/data/source
+/data/sources
 .idea
 __pycache__
 dist
+*_env/
