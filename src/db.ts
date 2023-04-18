@@ -1,6 +1,10 @@
-const lzma = require('../node_modules/lzma/src/lzma-d-min.js')
+//const lzma = require('../node_modules/lzma/src/lzma-d-min.js');
+const LZMAJS = require("./lib/lzmajs.js").LZMAJS;
+
 import { formatMilliseconds } from './helper';
-import * as ui from './ui'
+
+import * as ui from './ui';
+
 
 export interface Database {
     bounds_avgt: {
@@ -67,9 +71,27 @@ export const fetchAndUnpackData = (on_finish:(data:Database)=>void, on_failure:(
     oReq.send();
 }
 
-
 const decompressData = (data: Uint8Array) => {
     _bufferTime = performance.now();
+    new Promise<Uint8Array>((resolve, reject) => {
+        let outStream = new LZMAJS.oStream();
+        try {
+            LZMAJS.decode(data.buffer, outStream);
+        } catch (error) {
+            reject(error);
+        }
+        return resolve(outStream.toUint8Array())
+    }).catch(error => {
+        _failureFunction("LZMA decompression failed:" + error)
+    })
+    .then(res => {
+        if (res instanceof Uint8Array) {
+            let speed = formatMilliseconds(performance.now() - _bufferTime);
+            ui.loadingDialogAddHistory(`LZMA Decompression [${(res.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
+            unbinData(res.buffer);
+        }
+    });
+    /*
     lzma.LZMA.decompress(data,
         function on_finish(res: Uint8Array, error: string) {
             if (!res) {
@@ -80,7 +102,7 @@ const decompressData = (data: Uint8Array) => {
                 ui.loadingDialogAddHistory(`LZMA Decompression [${(res.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
                 unbinData(res.buffer);
             }
-        });
+        });*/
 }
 
 const dvgetUintFcPtr:any = {

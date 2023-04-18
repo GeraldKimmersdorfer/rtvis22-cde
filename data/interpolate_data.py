@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn import linear_model
 
-input_filepath = r'C:/tmp/rtvis22-cde/data/source/GlobalLandTemperaturesByCity.csv'
+input_filepath = r'data/sources/GlobalLandTemperaturesByCity.csv'
 #row_sample = 1.0 # keeps x% of rows in output (for faster debugging)
 
 

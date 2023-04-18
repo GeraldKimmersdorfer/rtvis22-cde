@@ -1,0 +1,162 @@
+<html>
+	<head>
+		<title>Uncompress Comparator</title>
+	</head>
+<body>
+    <!-- For LZ4 -->
+	<script type="text/javascript" src="include/lz4/lz4.min.js"></script>
+    <!-- For LZMAJS -->
+    <script type="text/javascript" src="include/lzmajs/lzmajs.min.js"></script>
+    <!-- For LZMA-JS-->
+    <script type="text/javascript" src="include/lzma-js/lzma.js"></script>
+    <script src="include/lzma-js/lzma_worker.js"></script>
+
+    
+
+	<script type="text/javascript">
+
+        files = [
+            "../sources/cdata_100_2bit_0.lzma",
+            //"cdata_100_2bit_0DEF.lzma",
+            //"cdata_100_2bit_1DEF.lzma",
+            //"cdata_100_2bit_7EXT.lzma",
+            //"cdata_100_2bit_9.lzma",
+            "../sources/cdata_100_2bit_9EXT.lzma",
+            //"cdata_100_2bit_DEF.lzma",
+            //"cdata_100_2bit_EXT.lzma"
+        ];
+        compressors = [
+            { name: "lzmajs", fct: decode_using_lzmajs },
+            { name: "lzma-js", fct: decode_using_lzma_js},
+        ];
+
+        //var my_lzma = new LZMA("include/lzma-js/lzma_worker.js");
+        var LZ4 = require('lz4');
+        var Buffer = require('buffer').Buffer;
+
+        function decode_using_lz4(inputBuffer) {
+            var compressed = Buffer.from(inputBuffer);
+            return LZ4.decode(compressed);
+        }
+
+        function encode_using_lz4(inputBuffer) {
+            // LZ4 can only work on Buffers
+            var input = Buffer.from(inputBuffer)
+            // Initialize the output buffer to its maximum length based on the input data
+            var output = Buffer.alloc( LZ4.encodeBound(input.length) )
+            // block compression (no archive format)
+            var compressedSize = LZ4.encodeBlock(input, output)
+            // remove unnecessary bytes
+            output = output.slice(0, compressedSize)
+        }
+
+        function decode_using_lzmajs(inputBuffer) {
+            // invoke synchronous decoding
+            var outStream = new LZMAJS.oStream();
+			LZMAJS.decode(inputBuffer, outStream);
+            return outStream.toUint8Array();
+        }
+
+        function decode_using_lzma_js(inputBuffer) {
+            /// To decompress:
+            let buffer = new Uint8Array(inputBuffer);
+            return LZMA.decompress(buffer);
+        }
+
+        function test_uncompressor(name, decode_fct, buffer) {
+            var t0 = performance.now();
+            try {
+                console.log("Attempting to decode with " + name);
+                var resp = decode_fct(buffer);
+                var delta = (performance.now() - t0).toFixed(4);
+                console.info("Decode successfull with " + name + " in " + delta + " ms.")
+                console.info("Response: " , resp);
+                return {
+                    delta: delta,
+                    data: resp
+                }
+            } catch (error) {
+                console.error("Decode failed for " + name + " with error " + error);
+            }
+            return {
+                delta: -1,
+                data: ByteArray()
+            };
+        }
+
+        function readBuffer(url) {
+            return new Promise(function (resolve, reject) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('get', url, true);
+                xhr.responseType = 'arraybuffer';
+                xhr.onload = function () {
+                    var status = xhr.status;
+                    if (status == 200) {
+                        resolve(xhr.response);
+                    } else {
+                        reject(status);
+                    }
+                };
+                xhr.send();
+            });
+        }
+
+
+        async function test_file(filename) {
+            var htmlresp = '<tr><td>' + filename + '</td>';
+
+            console.log("Fetching file " + filename);
+            var buffer = await readBuffer(filename);
+
+            htmlresp += '<td>' + buffer.byteLength + '</td>';
+            var uncompressedSize = 0;
+            var testhtml = '';
+            compressors.forEach(itm => {
+                let resp = test_uncompressor(itm.name, itm.fct, buffer);
+                if (uncompressedSize == 0 && resp.delta > 0) {
+                    uncompressedSize = resp.data.byteLength;
+                }
+                testhtml += '<td>' + (resp.delta / 1000).toFixed(2) + 's</td>';
+            });
+            
+            htmlresp += '<td>' + (uncompressedSize / buffer.byteLength * 100) + '</td>';
+            htmlresp += testhtml;
+            document.getElementById("tbres").innerHTML += htmlresp + '</tr>';
+        }
+
+
+        async function async_tests() {
+            for (var i = 0 ; i < files.length; i++) {
+                await test_file(files[i]);
+            }
+        }
+
+        function start_test() {
+            async_tests();
+        }
+
+	</script>
+
+    <button onclick="javascript: start_test();">Start Test</button>
+    <i>For more output pls check the log</i><br/>
+    <table border="1" width="100%">
+        <thead>
+            <tr id="tbheads">
+                <th>Filename</th>
+                <th>Size</th>
+                <th>Compression-Rate</th>
+            </tr>
+        </thead>
+        <tbody id="tbres">
+
+        </tbody>
+    </table>
+
+    <script type="text/javascript">
+        var elem = document.getElementById("tbheads");
+        compressors.forEach(itm => {
+            elem.innerHTML += '<th>' + itm.name + '</th>';
+        });
+    </script>
+</body>
+</html>
