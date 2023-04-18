@@ -58,7 +58,7 @@ struct Rectangle {
     top: f32
 }
 
-const BINNING_WORKGROUP_SIZE:u32 = 64;
+const BINNING_WORKGROUP_SIZE:u32 = 32;
 const MAX_U32:f32 = 4294967295.0;
 const KDTRAVERSAL_QUEUE_SIZE = 10;
 

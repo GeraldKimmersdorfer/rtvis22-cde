@@ -9,7 +9,7 @@ import rend_points_shader from './shaders/rend_points.wgsl';
 import * as geoJsonCoords from '@mapbox/geojson-coords';
 import { Delaunay } from 'd3-delaunay';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
-import { createEmptyGPUBuffer, createGpuBuffer, dec2bin, degrees_to_radians, discretize } from './helper'
+import { createEmptyGPUBuffer, createGpuBuffer, dec2bin, degrees_to_radians, discretize, getErrorMessage } from './helper'
 import { GridBuffer, KdPositionBuffer, UniformBuffer } from './rendering/buffer';
 import { Database, DB } from './db';
 import * as ui from './ui';
@@ -30,6 +30,8 @@ var _adapter: GPUAdapter;
 var _device: GPUDevice;
 var _context: GPUCanvasContext;
 
+var _querySet: GPUQuerySet;
+
 var _positionBuffer: GPUBuffer;
 var _temperatureBuffer: GPUBuffer;
 var _gridBuffer: GPUBuffer;
@@ -44,6 +46,8 @@ var _mapBoundriesVertexBuffer: GPUBuffer;
 var _mapModelBuffer: GPUBuffer;
 var _mapBoundriesModelBuffer: GPUBuffer;
 var _kdPositionBuffer: GPUBuffer;
+var _queryBuffer: GPUBuffer;
+var _queryReadBuffer: GPUBuffer;
 
 var _drawMapPipeline: GPURenderPipeline;
 var _drawPointsPipeline: GPURenderPipeline;
@@ -71,9 +75,13 @@ var _mapPoints: number[];   // lat lon original points of map
 var _mapBoundriesTriangleCount: number;
 var _mapBoundriesPoints: number[];
 
-const AGGREGATE_WORKGROUP_SIZE = 64; // dont forget to change in shader
-const BINNING_WORKGROUP_SIZE = 64; // dont forget to change in shader
-const MINMAX_WORKGROUP_SIZE = 64; // dont forget to change in shader
+var _timestampQueriesEnabled: boolean = true;
+
+const AGGREGATE_WORKGROUP_SIZE = 32; // dont forget to change in shader
+const BINNING_WORKGROUP_SIZE = 32; // dont forget to change in shader
+const MINMAX_WORKGROUP_SIZE = 32; // dont forget to change in shader
+
+const QUERY_CAPACITY = 6; //Max number of timestamps we can store
 
 export var uniformBuffer: UniformBuffer = new UniformBuffer();
 export var gridBuffer: GridBuffer = new GridBuffer();
@@ -90,7 +98,31 @@ export var colorsMap:any = {
 export const init = async () => {
     _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
     _adapter = await navigator.gpu?.requestAdapter() as GPUAdapter;
-    _device = await _adapter?.requestDevice() as GPUDevice;
+    try {
+        _device = await _adapter?.requestDevice({
+            requiredFeatures: ["timestamp-query"],
+        }) as GPUDevice;
+        ui.TH.setGroups([
+            { name: "Aggregate", id: "agg", avgCount: 60},
+            { name: "Binning", id: "bin", avgCount: 60},
+            { name: "MinMax", id: "minmax", avgCount: 60},
+            { name: "Rendering", id: "rend", avgCount: 60},
+            { name: "WriteBack", id: "wback", avgCount: 60},
+            { name: "Frame", id: "frame", avgCount: 60}
+        ]);
+    } catch (error) {
+        if (getErrorMessage(error).includes('Unsupported feature: timestamp-query')) {
+
+            _timestampQueriesEnabled = false;
+            console.warn("TimeStamp-Queries are not supported on this browser. (On chrome you need a command line flag, read more here: https://omar-shehata.medium.com/how-to-use-webgpu-timestamp-query-9bf81fb5344a");
+            ui.TH.setGroups([
+                {name: "Overall Frame-Time", id: "frame", avgCount: 60}
+            ]);
+            _device = await _adapter?.requestDevice() as GPUDevice;
+        } else {
+            throw error;
+        }
+    }
     _context = _canvas.getContext('webgpu') as unknown as GPUCanvasContext;
     const format: GPUTextureFormat = 'bgra8unorm';
     _context.configure({
@@ -104,6 +136,18 @@ export const init = async () => {
     uniformBuffer.refresh_db_properties(DB);
     _uniformBuffer = createGpuBuffer(_device, uniformBuffer.get_buffer(), Uint8Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
     
+    if (_timestampQueriesEnabled) {
+        _querySet = _device.createQuerySet({
+            type: "timestamp",
+            count: QUERY_CAPACITY
+        });
+        _queryBuffer = _device.createBuffer({
+            size: 8 * QUERY_CAPACITY,
+            usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+        });
+        _queryReadBuffer = createEmptyGPUBuffer(_device, _queryBuffer.size, GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST);
+    }
+
     createMapBuffer();
     createGridBuffer();
     createPositionBuffer();
@@ -480,6 +524,7 @@ var queuedFrame:null|{
 var executingQueuedFrame:boolean = false;
 
 export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderflags:number = RenderFlags.STAGE_RENDERING) => {
+    start = Date.now();
     if (!_initialised) return;
     if (_frameInFlight && !_benchmarkEnabled) {
         // In a few scenarios we can not just discard the frame. (e.g. buffer change) Lets queue it and merge with other queued ones.
@@ -520,48 +565,36 @@ export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderf
     var commandEncoder: GPUCommandEncoder;
     var start:number;
 
+    commandEncoder = _device.createCommandEncoder();
+    if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 0);
     if (renderflags >= RenderFlags.STAGE_AGGREGATE) {
-        commandEncoder = _device.createCommandEncoder();
         const aggregatePass = commandEncoder.beginComputePass();
+
         aggregatePass.setPipeline(_aggregatePipeline);
         aggregatePass.setBindGroup(0, _aggregateBindGroup);
         aggregatePass.dispatchWorkgroups(Math.ceil(DB.positions.length / AGGREGATE_WORKGROUP_SIZE));
         aggregatePass.end();
-
-        start = Date.now();
-        _device.queue.submit([commandEncoder.finish()]);
-        await _device.queue.onSubmittedWorkDone();
-        TH.pushTime("agg", Date.now() - start);       
+        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 1);
     }
 
+
     if (renderflags >= RenderFlags.STAGE_BINNING_MINMAX) {
-        commandEncoder = _device.createCommandEncoder();
         const binningPass = commandEncoder.beginComputePass();
         binningPass.setPipeline(_binningPipeline);
         binningPass.setBindGroup(0, _binningBindGroup);
         binningPass.dispatchWorkgroups(Math.ceil(pointCount / BINNING_WORKGROUP_SIZE));
         binningPass.end();
-
-        start = Date.now();
-        _device.queue.submit([commandEncoder.finish()]);
-        await _device.queue.onSubmittedWorkDone();
-        TH.pushTime("bin", Date.now() - start);
-
-        commandEncoder = _device.createCommandEncoder();
+        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 2);
         const avgPass = commandEncoder.beginComputePass();
         avgPass.setPipeline(_minMaxPipeline);
         avgPass.setBindGroup(0, _minMaxBindGroup);
         avgPass.dispatchWorkgroups(1);
         avgPass.end();
-
-        start = Date.now();
-        _device.queue.submit([commandEncoder.finish()]);
-        await _device.queue.onSubmittedWorkDone();
-        TH.pushTime("minmax", Date.now() - start);
+        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 3);
     }
 
+
     if (renderflags >= RenderFlags.STAGE_RENDERING) {
-        commandEncoder = _device.createCommandEncoder();
         const textureView = _context.getCurrentTexture().createView();
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
@@ -596,27 +629,70 @@ export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderf
         }
 
         renderPass.end();
-
-        start = Date.now();
-        _device.queue.submit([commandEncoder.finish()]);
-        await _device.queue.onSubmittedWorkDone();
-        TH.pushTime("rend", Date.now() - start);
+        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 4);
     }
 
     if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
         // Create readback buffer:
         createGridReadBuffer();
-
-        commandEncoder = _device.createCommandEncoder();
         commandEncoder.copyBufferToBuffer(_gridBuffer, 0, _gridReadBuffer, 0, _gridReadBuffer.size);
-        _device.queue.submit([commandEncoder.finish()]);
-        start = Date.now();
+        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 5);
+    }
+
+    // Resolve Timestamps:
+    if (_timestampQueriesEnabled) {
+        commandEncoder.resolveQuerySet(_querySet, 0, QUERY_CAPACITY, _queryBuffer, 0);
+        commandEncoder.copyBufferToBuffer(_queryBuffer, 0, _queryReadBuffer, 0, _queryBuffer.size);
+    }
+
+    _device.queue.submit([commandEncoder.finish()]);
+    await _device.queue.onSubmittedWorkDone();
+
+    if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
         await _gridReadBuffer.mapAsync(GPUMapMode.READ);
-        TH.pushTime("wback", Date.now() - start);
         const copyArrayBuffer: ArrayBuffer = _gridReadBuffer.getMappedRange();
         gridBuffer.from_buffer(copyArrayBuffer);
         ui.refreshGraphInformation(gridBuffer);
+        _gridReadBuffer.unmap();
     }
+
+    if (_timestampQueriesEnabled) {
+        // wait for timestamp data to be available
+        // Read the storage buffer data
+        await _queryReadBuffer.mapAsync(GPUMapMode.READ);
+        const copyArrayBuffer: ArrayBuffer = _queryReadBuffer.getMappedRange();
+        // Decode it into an array of timestamps in nanoseconds
+        const timingsNanoseconds = new BigInt64Array(copyArrayBuffer);
+        // Now lets calculate all time differences:
+        let diffSum:bigint = BigInt(0);
+        if (renderflags >= RenderFlags.STAGE_AGGREGATE) {
+            let delta = timingsNanoseconds[1] - timingsNanoseconds[0];
+            diffSum += delta;
+            TH.pushTime("agg", Number(delta) / 1000000);
+        }
+        if (renderflags >= RenderFlags.STAGE_BINNING_MINMAX) {
+            var delta = timingsNanoseconds[2] - timingsNanoseconds[0] - diffSum;
+            diffSum += delta;
+            TH.pushTime("bin", Number(delta) / 1000000);
+            delta = timingsNanoseconds[3] - timingsNanoseconds[0] - diffSum;
+            diffSum += delta;
+            TH.pushTime("minmax", Number(delta) / 1000000);
+        }
+        if (renderflags >= RenderFlags.STAGE_RENDERING) {
+            let delta = timingsNanoseconds[4] - timingsNanoseconds[0] - diffSum;
+            diffSum += delta;
+            TH.pushTime("rend", Number(delta) / 1000000);
+        }
+        if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
+            let delta = timingsNanoseconds[5] - timingsNanoseconds[0] - diffSum;
+            diffSum += delta;
+            TH.pushTime("wback", Number(delta) / 1000000);
+        }
+        _queryReadBuffer.unmap();
+    }
+
+    TH.pushTime("frame", Date.now() - start);
+
 
     _frameInFlight = false;
     if (queuedFrame && !executingQueuedFrame) {

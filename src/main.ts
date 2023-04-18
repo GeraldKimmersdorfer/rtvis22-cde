@@ -6,6 +6,7 @@ import * as ui from './ui'
 import $ from "jquery";
 import * as renderer from './renderer';
 import { Database, fetchAndUnpackData } from './db';
+import { error } from 'console';
 
 
 // Entry-Point of Application
@@ -32,6 +33,8 @@ const main = () => {
                 ui.showCanvas();
                 ui.showLegend();
             });
+        }).catch(error => {
+            ui.loadingDialogError(error);
         });
         
         var doitdelayed:number;

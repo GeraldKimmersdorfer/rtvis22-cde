@@ -18,6 +18,12 @@ require('vanderlee-colorpicker/jquery.colorpicker');
 
 export var hoverEnabled:boolean = true;
 
+export interface TimeHolderGroup {
+  id: string,
+  name: string,
+  avgCount: number
+}
+
 // Shows the error message when webgpu is not available on current browser
 export const ShowNoWebGpuWarning = () => {
     $("body").addClass("error").removeClass("loading");
@@ -28,17 +34,11 @@ class ComputeTimeHolder {
 
   frameTimes:{[id: string] : {
     name:string,
-    vals:number[]
+    vals:number[],
+    avgCount: number
   }} = {};
 
   constructor() {
-      this.frameTimes = {
-        agg: { name: "Aggregate", vals: []},
-        bin: { name: "Binning", vals: []},
-        minmax: { name: "MinMax", vals: []},
-        rend: { name: "Rendering", vals: []},
-        wback: { name: "WriteBack", vals: []}
-      }
   }
 
   pushTime(id:string, time:number) {
@@ -46,7 +46,17 @@ class ComputeTimeHolder {
       this.frameTimes[id].vals.shift();
     }
     let avg = this.frameTimes[id].vals.reduce((a,b) => a + b, 0) / this.frameTimes[id].vals.length;
-    $("#lbl-" + id + "time").html(time.toString() + " ms (Ø " + avg.toFixed(2) + ")");
+    $("#lbl-" + id + "time").html(time.toFixed(2) + " ms (Ø " + avg.toFixed(2) + ")");
+  }
+
+  setGroups(groups:TimeHolderGroup[]) {
+    var html = '';
+    this.frameTimes = {};
+    groups.forEach((itm, index) => {
+      this.frameTimes[itm.id] = { name: itm.name, vals: [], avgCount: itm.avgCount }
+      html += ( index > 0 ? '<br\>' : '') + `${itm.name}: <span id="lbl-${itm.id}time" class="time-range">0 ms (Ø 0.0)</span>`;
+    })
+    $("#time-group").html(html);
   }
 }
 

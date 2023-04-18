@@ -37,7 +37,7 @@ struct TemperatureEntry {
     src: u32
 }
 
-const AGGREGATE_WORKGROUP_SIZE:u32 = 64;
+const AGGREGATE_WORKGROUP_SIZE:u32 = 32;
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(2) var<storage, read_write> positions: array<PositionEntry>;

@@ -30,7 +30,7 @@ struct GridEntry {
     valueN: u32
 }
 
-const MINMAX_WORKGROUP_SIZE:u32 = 64;
+const MINMAX_WORKGROUP_SIZE:u32 = 32;
 const MAX_U32:f32 = 4294967295.0;
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;

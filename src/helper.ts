@@ -4,6 +4,11 @@ export const CheckWebGPU = () => {
     return "gpu" in navigator;
 }
 
+export const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error) return error.message
+    return "";
+}
+
 export const getMonthDifference = (d1: Date, d2: Date): number => {
     var months = (d2.getFullYear() - d1.getFullYear()) * 12;
     months -= d1.getMonth();
