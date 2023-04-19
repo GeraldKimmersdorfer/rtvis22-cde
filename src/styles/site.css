@@ -234,3 +234,57 @@ h4 {
   width: 100% !important;
   box-sizing: border-box;
 }
+
+#db_cards > .db_card:nth-child(1) {
+  border-radius: 5px 5px 0px 0px;
+}
+#db_cards > .db_card:last-child {
+  border-radius: 0px 0px 5px 5px;
+}
+.db_card {
+  width: 100%;
+  border: rgba(255,255,255,0.5) solid 1px;
+  box-sizing: border-box;
+  padding: 7px;
+  transition: ease 0.4s all;
+}
+.db_card > div {
+  width:100%;
+  padding: 2px 0px 2px 0px;
+}
+
+.db_card_title {
+  font-size: small;
+  font-weight: bold;
+}
+
+
+.db_card.selected > .db_card_title {
+  text-decoration: underline;
+}
+.db_card.selected:hover {
+  background-color: rgba(192, 14, 14, 0.3);
+  cursor: not-allowed;
+}
+
+.db_card_info {
+  font-size:  smaller;
+  font-style: italic;
+  display: none;
+}
+
+.db_card_filename {
+  font-size:  smaller;
+  font-style: italic;
+  text-align: right;
+  opacity: 0.5;
+}
+
+.db_card:hover {
+  background-color: rgba(14, 151, 192, 0.3);
+  cursor: pointer;
+}
+.db_card.selected {
+  border-width: 3px;
+  background-color: rgba(192, 115, 14, 0.3);
+}

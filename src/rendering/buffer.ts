@@ -33,7 +33,7 @@ export class UniformBuffer {
 
     temperatureBounds: Vec2_f32 = {x_f32:0.0, y_f32:0.0};
 
-    useKdTreeImplementation_u32: number = 0;
+    useKdTreeImplementation_u32: number = 1;
     
     buff3: Vec3_u32 = {x_u32:0, y_u32:0, z_u32:0};
 

@@ -291,6 +291,11 @@ dialog.dialog('option', 'title', '<span class="material-symbols-outlined">Info</
         renderer.startBenchmark();
       }
     });
+    $(".db_card").mouseenter(function() {
+      $(this).children(".db_card_info").show(300);
+    }).mouseleave(function() {
+      $(this).children(".db_card_info").hide(300); 
+    })
 
     var delayHideTimer:any;
     let map_mouse_move = (x:number, y:number) => {

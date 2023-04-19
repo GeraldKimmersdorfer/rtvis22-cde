@@ -114,7 +114,7 @@ export const init = async () => {
         if (getErrorMessage(error).includes('Unsupported feature: timestamp-query')) {
 
             _timestampQueriesEnabled = false;
-            console.warn("TimeStamp-Queries are not supported on this browser. (On chrome you need a command line flag, read more here: https://omar-shehata.medium.com/how-to-use-webgpu-timestamp-query-9bf81fb5344a");
+            console.warn("TimeStamp-Queries are not supported on this browser. (Chrome/Canary you need to start with flag: --disable-dawn-features=disallow_unsafe_apis, read more here: https://omar-shehata.medium.com/how-to-use-webgpu-timestamp-query-9bf81fb5344a");
             ui.TH.setGroups([
                 {name: "Overall Frame-Time", id: "frame", avgCount: 60}
             ]);
@@ -249,7 +249,7 @@ const createPositionBuffer = () => {
         pabView.setInt32(i * 32 + 12, DB.positions[i]['id_max'], true);
     }
     _positionBuffer = createGpuBuffer(_device, positionsArrayBuffer, Uint8Array, GPUBufferUsage.STORAGE);
-
+    
     kdPositionBuffer.from_data(DB);
     _kdPositionBuffer = createGpuBuffer(_device, kdPositionBuffer.get_buffer(), Uint8Array, GPUBufferUsage.STORAGE);
 }
@@ -521,185 +521,175 @@ var queuedFrame:null|{
     renderflags: RenderFlags
 } = null;
 
-var executingQueuedFrame:boolean = false;
-
 export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderflags:number = RenderFlags.STAGE_RENDERING) => {
-    start = Date.now();
+    
     if (!_initialised) return;
-    if (_frameInFlight && !_benchmarkEnabled) {
+    if (_frameInFlight) {
         // In a few scenarios we can not just discard the frame. (e.g. buffer change) Lets queue it and merge with other queued ones.
         if (queuedFrame) {
-            queuedFrame = {
-                bufferflags: queuedFrame.bufferflags | bufferflags,
-                renderflags: queuedFrame.renderflags | renderflags
-            };
+            queuedFrame = { bufferflags: queuedFrame.bufferflags | bufferflags, renderflags: queuedFrame.renderflags | renderflags };
         } else {
-            queuedFrame = {
-                bufferflags: bufferflags,
-                renderflags: renderflags
-            };
+            queuedFrame = { bufferflags: bufferflags, renderflags: renderflags };
         }
         return;
     }
     _frameInFlight = true;
-
-    if ((bufferflags & BufferFlags.UPDATE_GRID_BUFFER) !== 0) {
-        createGridBuffer();
-    }
-    if ((bufferflags & BufferFlags.UPDATE_MAP_BUFFER) !== 0) {
-        updateMapPointBuffer();
-    }
-    if ((bufferflags & BufferFlags.UPDATE_POSITION_BUFFER) !== 0) {
-        createPositionBuffer();
-    }
-    if (bufferflags >= BufferFlags.UPDATE_GRID_BUFFER) {
-        createBindGroups();
-    }
-
-    // Update uniform buffer and model color buffer:
-    _device.queue.writeBuffer(_uniformBuffer, 0, uniformBuffer.get_buffer());
-    _device.queue.writeBuffer(_mapModelBuffer, 0, new Float32Array(colorsMap.continents));
-    _device.queue.writeBuffer(_mapBoundriesModelBuffer, 0, new Float32Array(colorsMap.water));
-    let pointCount = uniformBuffer.get_pointcount();
-
-    var commandEncoder: GPUCommandEncoder;
-    var start:number;
-
-    commandEncoder = _device.createCommandEncoder();
-    if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 0);
-    if (renderflags >= RenderFlags.STAGE_AGGREGATE) {
-        const aggregatePass = commandEncoder.beginComputePass();
-
-        aggregatePass.setPipeline(_aggregatePipeline);
-        aggregatePass.setBindGroup(0, _aggregateBindGroup);
-        aggregatePass.dispatchWorkgroups(Math.ceil(DB.positions.length / AGGREGATE_WORKGROUP_SIZE));
-        aggregatePass.end();
-        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 1);
-    }
-
-
-    if (renderflags >= RenderFlags.STAGE_BINNING_MINMAX) {
-        const binningPass = commandEncoder.beginComputePass();
-        binningPass.setPipeline(_binningPipeline);
-        binningPass.setBindGroup(0, _binningBindGroup);
-        binningPass.dispatchWorkgroups(Math.ceil(pointCount / BINNING_WORKGROUP_SIZE));
-        binningPass.end();
-        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 2);
-        const avgPass = commandEncoder.beginComputePass();
-        avgPass.setPipeline(_minMaxPipeline);
-        avgPass.setBindGroup(0, _minMaxBindGroup);
-        avgPass.dispatchWorkgroups(1);
-        avgPass.end();
-        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 3);
-    }
-
-
-    if (renderflags >= RenderFlags.STAGE_RENDERING) {
-        const textureView = _context.getCurrentTexture().createView();
-        const renderPass = commandEncoder.beginRenderPass({
-            colorAttachments: [{
-                view: textureView,
-                clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, //background color
-                loadOp: 'load',
-                storeOp: 'store'
-            }]
-        });
-
-        renderPass.setPipeline(_drawMapPipeline);
-
-        renderPass.setBindGroup(0, _drawMapBoundriesBindGroup);
-        renderPass.setVertexBuffer(0, _mapBoundriesVertexBuffer);
-        renderPass.setIndexBuffer(_mapBoundriesIndexBuffer, 'uint32');
-        renderPass.drawIndexed(_mapBoundriesTriangleCount);
-
-        renderPass.setBindGroup(0, _drawMapBindGroup);
-        renderPass.setVertexBuffer(0, _mapVertexBuffer);
-        renderPass.setIndexBuffer(_mapIndexBuffer, 'uint32');
-        renderPass.drawIndexed(_mapTriangleCount);
-
-
-        renderPass.setPipeline(_drawGridPipeline);
-        renderPass.setBindGroup(0, _drawGridBindGroup);
-        renderPass.draw(6, pointCount);
-        
-        if (_pointRendering) {
-            renderPass.setPipeline(_drawPointsPipeline);
-            renderPass.setBindGroup(0, _drawPointsBindGroup);
-            renderPass.draw(4, DB.positions.length);
-        }
-
-        renderPass.end();
-        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 4);
-    }
-
-    if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
-        // Create readback buffer:
-        createGridReadBuffer();
-        commandEncoder.copyBufferToBuffer(_gridBuffer, 0, _gridReadBuffer, 0, _gridReadBuffer.size);
-        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 5);
-    }
-
-    // Resolve Timestamps:
-    if (_timestampQueriesEnabled) {
-        commandEncoder.resolveQuerySet(_querySet, 0, QUERY_CAPACITY, _queryBuffer, 0);
-        commandEncoder.copyBufferToBuffer(_queryBuffer, 0, _queryReadBuffer, 0, _queryBuffer.size);
-    }
-
-    _device.queue.submit([commandEncoder.finish()]);
-    await _device.queue.onSubmittedWorkDone();
-
-    if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
-        await _gridReadBuffer.mapAsync(GPUMapMode.READ);
-        const copyArrayBuffer: ArrayBuffer = _gridReadBuffer.getMappedRange();
-        gridBuffer.from_buffer(copyArrayBuffer);
-        ui.refreshGraphInformation(gridBuffer);
-        _gridReadBuffer.unmap();
-    }
-
-    if (_timestampQueriesEnabled) {
-        // wait for timestamp data to be available
-        // Read the storage buffer data
-        await _queryReadBuffer.mapAsync(GPUMapMode.READ);
-        const copyArrayBuffer: ArrayBuffer = _queryReadBuffer.getMappedRange();
-        // Decode it into an array of timestamps in nanoseconds
-        const timingsNanoseconds = new BigInt64Array(copyArrayBuffer);
-        // Now lets calculate all time differences:
-        let diffSum:bigint = BigInt(0);
-        if (renderflags >= RenderFlags.STAGE_AGGREGATE) {
-            let delta = timingsNanoseconds[1] - timingsNanoseconds[0];
-            diffSum += delta;
-            TH.pushTime("agg", Number(delta) / 1000000);
-        }
-        if (renderflags >= RenderFlags.STAGE_BINNING_MINMAX) {
-            var delta = timingsNanoseconds[2] - timingsNanoseconds[0] - diffSum;
-            diffSum += delta;
-            TH.pushTime("bin", Number(delta) / 1000000);
-            delta = timingsNanoseconds[3] - timingsNanoseconds[0] - diffSum;
-            diffSum += delta;
-            TH.pushTime("minmax", Number(delta) / 1000000);
-        }
-        if (renderflags >= RenderFlags.STAGE_RENDERING) {
-            let delta = timingsNanoseconds[4] - timingsNanoseconds[0] - diffSum;
-            diffSum += delta;
-            TH.pushTime("rend", Number(delta) / 1000000);
-        }
-        if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
-            let delta = timingsNanoseconds[5] - timingsNanoseconds[0] - diffSum;
-            diffSum += delta;
-            TH.pushTime("wback", Number(delta) / 1000000);
-        }
-        _queryReadBuffer.unmap();
-    }
-
-    TH.pushTime("frame", Date.now() - start);
-
-
-    _frameInFlight = false;
-    if (queuedFrame && !executingQueuedFrame) {
-        executingQueuedFrame = true;
-        renderFrame(queuedFrame.bufferflags, queuedFrame.renderflags);
+    queuedFrame = { bufferflags: bufferflags, renderflags: renderflags };
+    while (queuedFrame) {
+        start = Date.now();
+        bufferflags |= queuedFrame.bufferflags;
+        renderflags |= queuedFrame.renderflags;
         queuedFrame = null;
-        executingQueuedFrame = false;
+
+        if ((bufferflags & BufferFlags.UPDATE_GRID_BUFFER) !== 0) {
+            createGridBuffer();
+        }
+        if ((bufferflags & BufferFlags.UPDATE_MAP_BUFFER) !== 0) {
+            updateMapPointBuffer();
+        }
+        if ((bufferflags & BufferFlags.UPDATE_POSITION_BUFFER) !== 0) {
+            createPositionBuffer();
+        }
+        if (bufferflags >= BufferFlags.UPDATE_GRID_BUFFER) {
+            createBindGroups();
+        }
+    
+        // Update uniform buffer and model color buffer:
+        _device.queue.writeBuffer(_uniformBuffer, 0, uniformBuffer.get_buffer());
+        _device.queue.writeBuffer(_mapModelBuffer, 0, new Float32Array(colorsMap.continents));
+        _device.queue.writeBuffer(_mapBoundriesModelBuffer, 0, new Float32Array(colorsMap.water));
+        let pointCount = uniformBuffer.get_pointcount();
+    
+        var commandEncoder: GPUCommandEncoder;
+        var start:number;
+
+        commandEncoder = _device.createCommandEncoder();
+        if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 0);
+        if (renderflags >= RenderFlags.STAGE_AGGREGATE) {
+            const aggregatePass = commandEncoder.beginComputePass();
+    
+            aggregatePass.setPipeline(_aggregatePipeline);
+            aggregatePass.setBindGroup(0, _aggregateBindGroup);
+            aggregatePass.dispatchWorkgroups(Math.ceil(DB.positions.length / AGGREGATE_WORKGROUP_SIZE));
+            aggregatePass.end();
+            if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 1);
+        }
+    
+        if (renderflags >= RenderFlags.STAGE_BINNING_MINMAX) {
+            const binningPass = commandEncoder.beginComputePass();
+            binningPass.setPipeline(_binningPipeline);
+            binningPass.setBindGroup(0, _binningBindGroup);
+            binningPass.dispatchWorkgroups(Math.ceil(pointCount / BINNING_WORKGROUP_SIZE));
+            binningPass.end();
+            if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 2);
+            const avgPass = commandEncoder.beginComputePass();
+            avgPass.setPipeline(_minMaxPipeline);
+            avgPass.setBindGroup(0, _minMaxBindGroup);
+            avgPass.dispatchWorkgroups(1);
+            avgPass.end();
+            if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 3);
+        }
+    
+    
+        if (renderflags >= RenderFlags.STAGE_RENDERING) {
+            const textureView = _context.getCurrentTexture().createView();
+            const renderPass = commandEncoder.beginRenderPass({
+                colorAttachments: [{
+                    view: textureView,
+                    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, //background color
+                    loadOp: 'load',
+                    storeOp: 'store'
+                }]
+            });
+    
+            renderPass.setPipeline(_drawMapPipeline);
+    
+            renderPass.setBindGroup(0, _drawMapBoundriesBindGroup);
+            renderPass.setVertexBuffer(0, _mapBoundriesVertexBuffer);
+            renderPass.setIndexBuffer(_mapBoundriesIndexBuffer, 'uint32');
+            renderPass.drawIndexed(_mapBoundriesTriangleCount);
+    
+            renderPass.setBindGroup(0, _drawMapBindGroup);
+            renderPass.setVertexBuffer(0, _mapVertexBuffer);
+            renderPass.setIndexBuffer(_mapIndexBuffer, 'uint32');
+            renderPass.drawIndexed(_mapTriangleCount);
+    
+    
+            renderPass.setPipeline(_drawGridPipeline);
+            renderPass.setBindGroup(0, _drawGridBindGroup);
+            renderPass.draw(6, pointCount);
+            
+            if (_pointRendering) {
+                renderPass.setPipeline(_drawPointsPipeline);
+                renderPass.setBindGroup(0, _drawPointsBindGroup);
+                renderPass.draw(4, DB.positions.length);
+            }
+    
+            renderPass.end();
+            if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 4);
+        }
+    
+        if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
+            // Create readback buffer:
+            createGridReadBuffer();
+            commandEncoder.copyBufferToBuffer(_gridBuffer, 0, _gridReadBuffer, 0, _gridReadBuffer.size);
+            if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 5);
+        }
+    
+        // Resolve Timestamps:
+        if (_timestampQueriesEnabled) {
+            commandEncoder.resolveQuerySet(_querySet, 0, QUERY_CAPACITY, _queryBuffer, 0);
+            commandEncoder.copyBufferToBuffer(_queryBuffer, 0, _queryReadBuffer, 0, _queryBuffer.size);
+        }
+    
+        _device.queue.submit([commandEncoder.finish()]);
+        await _device.queue.onSubmittedWorkDone();  // ToDo: Not waiting for this and creation of ringbuffers for reading
+    
+        if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
+            await _gridReadBuffer.mapAsync(GPUMapMode.READ);
+            const copyArrayBuffer: ArrayBuffer = _gridReadBuffer.getMappedRange();
+            gridBuffer.from_buffer(copyArrayBuffer);
+            ui.refreshGraphInformation(gridBuffer);
+            _gridReadBuffer.unmap();
+        }
+    
+        if (_timestampQueriesEnabled) {
+            // wait for timestamp data to be available
+            // Read the storage buffer data
+            await _queryReadBuffer.mapAsync(GPUMapMode.READ);
+            const copyArrayBuffer: ArrayBuffer = _queryReadBuffer.getMappedRange();
+            // Decode it into an array of timestamps in nanoseconds
+            const timingsNanoseconds = new BigInt64Array(copyArrayBuffer);
+            // Now lets calculate all time differences:
+            let diffSum:bigint = BigInt(0);
+            if (renderflags >= RenderFlags.STAGE_AGGREGATE) {
+                let delta = timingsNanoseconds[1] - timingsNanoseconds[0];
+                diffSum += delta;
+                TH.pushTime("agg", Number(delta) / 1000000);
+            }
+            if (renderflags >= RenderFlags.STAGE_BINNING_MINMAX) {
+                var delta = timingsNanoseconds[2] - timingsNanoseconds[0] - diffSum;
+                diffSum += delta;
+                TH.pushTime("bin", Number(delta) / 1000000);
+                delta = timingsNanoseconds[3] - timingsNanoseconds[0] - diffSum;
+                diffSum += delta;
+                TH.pushTime("minmax", Number(delta) / 1000000);
+            }
+            if (renderflags >= RenderFlags.STAGE_RENDERING) {
+                let delta = timingsNanoseconds[4] - timingsNanoseconds[0] - diffSum;
+                diffSum += delta;
+                TH.pushTime("rend", Number(delta) / 1000000);
+            }
+            if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
+                let delta = timingsNanoseconds[5] - timingsNanoseconds[0] - diffSum;
+                diffSum += delta;
+                TH.pushTime("wback", Number(delta) / 1000000);
+            }
+            _queryReadBuffer.unmap();
+        }
+    
+        TH.pushTime("frame", Date.now() - start);
     }
+    _frameInFlight = false;
 }
 

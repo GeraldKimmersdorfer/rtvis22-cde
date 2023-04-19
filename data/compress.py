@@ -62,9 +62,8 @@ if (not onlycompress):
                 titem['avgt'] = float(row[1])
                 counttemp_noninterpolated += 1
             except:
-                # we should not end up here anymore because we interpolated in a previous step
-                titem['avgt'] = 0.0
-                titem['src'] = 1
+                # if value can't be interpreted (nan) ignore that one
+                continue
             boundsavgt = [min(titem['avgt'], boundsavgt[0]), max(titem['avgt'], boundsavgt[1])]
             try:
                 titem['avgtu'] = abs(float(row[2]))
