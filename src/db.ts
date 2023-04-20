@@ -1,4 +1,4 @@
-const LZMAJS = require("./lib/lzmajs.js").LZMAJS;
+
 
 import { formatMilliseconds } from './helper';
 
@@ -46,7 +46,7 @@ export var DB_files = [
         temperatures: 404,
         locations: 404
     },    
-    {
+    /*{
         name: "Original Cleaned",
         discretization: "2-bit",
         compressedsize: "404 MB",
@@ -54,7 +54,7 @@ export var DB_files = [
         filename: "cdata_orig_clean_2bit_0.lzma",
         temperatures: 404,
         locations: 404
-    },
+    },*/
     {
         name: "Extended Interpolated",
         discretization: "2-bit",
@@ -171,6 +171,25 @@ export const fetchAndUnpackData = (on_finish:(data:Database)=>void, on_failure:(
 
 const decompressData = (data: Uint8Array) => {
     _bufferTime = performance.now();
+
+    if (typeof(Worker) === "undefined") {
+        // Browser does not support WebWorkers
+        _failureFunction("No web workers supported...");
+    } else {
+        const worker = new Worker("assets/scripts/db_loading_worker.js");
+        worker.postMessage(data.buffer);
+        worker.onmessage = function(msg) {
+            let res = msg.data;
+            if (res instanceof Error) {
+                _failureFunction("LZMA decompression failed:" + res)
+            } else if (res instanceof Uint8Array) {
+                let speed = formatMilliseconds(performance.now() - _bufferTime);
+                ui.loadingDialogAddHistory(`LZMA Decompression [${(res.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
+                unbinData(res.buffer);
+            }
+        }
+    }
+/* 
     new Promise<Uint8Array>((resolve, reject) => {
         let outStream = new LZMAJS.oStream();
         try {
@@ -188,7 +207,7 @@ const decompressData = (data: Uint8Array) => {
             ui.loadingDialogAddHistory(`LZMA Decompression [${(res.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
             unbinData(res.buffer);
         }
-    });
+    });*/
 }
 
 const dvgetUintFcPtr:any = {

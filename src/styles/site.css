@@ -288,3 +288,6 @@ h4 {
   border-width: 3px;
   background-color: rgba(192, 115, 14, 0.3);
 }
+.ui-progressbar-value {
+    background-color: orange;
+}
