@@ -18,15 +18,19 @@ def fill_nans(group):
     X = group[group['AverageTemperature'].notna()]['dt'].dt.year.values.reshape(-1, 1)
     y = group[group['AverageTemperature'].notna()]['AverageTemperature'].values
 
-    # fit linear regression model
-    model = linear_model.LinearRegression().fit(X, y)
+    if len(X) == 0:
+        print(f"group {group['Latitude'].values[0]} {group['Longitude'].values[0]} only consists of NaNs")
+        group.dropna(inplace=True)
+    else:
+        # fit linear regression model
+        model = linear_model.LinearRegression().fit(X, y)
 
-    # predict temperature values for years
-    predicted_temperatures = model.predict(group['dt'].dt.year.values.reshape(-1, 1))
+        # predict temperature values for years
+        predicted_temperatures = model.predict(group['dt'].dt.year.values.reshape(-1, 1))
 
-    # fill NaNs with predictions
-    group['src'] = np.where(group['AverageTemperature'].isna(), 1, group['src'])
-    group['AverageTemperature'] = np.where(group['AverageTemperature'].isna(), predicted_temperatures, group['AverageTemperature'])
+        # fill NaNs with predictions
+        group['src'] = np.where(group['AverageTemperature'].isna(), 1, group['src'])
+        group['AverageTemperature'] = np.where(group['AverageTemperature'].isna(), predicted_temperatures, group['AverageTemperature'])
 
     # assert no NaNs left
     assert group['AverageTemperature'].isna().sum() == 0
@@ -60,7 +64,7 @@ def main():
     # group cities by month and apply linear regression interpolation to fill NaNs
     print('Filling NaNs...', end='')
     start = perf_counter()
-    df = df.groupby([df['dt'].dt.month, 'Country', 'City', 'Latitude', 'Longitude'], sort=False, group_keys=True).apply(fill_nans).reset_index(drop=True)
+    df = df.groupby([df['dt'].dt.month, 'Latitude', 'Longitude'], sort=False, group_keys=True).apply(fill_nans).reset_index(drop=True)
     print(f' {perf_counter() - start:.2f}s')
 
     #if row_sample < 1.0:

@@ -235,10 +235,10 @@ h4 {
   box-sizing: border-box;
 }
 
-#db_cards > .db_card:nth-child(1) {
+#db-cards > .db_card:nth-child(1) {
   border-radius: 5px 5px 0px 0px;
 }
-#db_cards > .db_card:last-child {
+#db-cards > .db_card:last-child {
   border-radius: 0px 0px 5px 5px;
 }
 .db_card {

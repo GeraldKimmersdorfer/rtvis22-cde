@@ -16,7 +16,7 @@ export const getMonthDifference = (d1: Date, d2: Date): number => {
     return months;
 }
 
-export const formatMilliseconds = (s: number) => {
+export const formatMilliseconds = (s: number):string => {
     if (s < 1000) {
         return `${s.toFixed(0)} ms`;
     } else if (s < 60000) {
@@ -26,6 +26,15 @@ export const formatMilliseconds = (s: number) => {
     } else {
         return `${(s / 3600000).toFixed(2)} h`;
     }
+}
+
+export const formatUIntNumbers = (n:number):string => {
+    if (n > 10**6) {
+        return `${(n / 10**6).toFixed(2)} M`
+    } else if (n > 10**3) {
+        return `${(n / 10**3).toFixed(2)} k`
+    }
+    return n.toString();
 }
 
 export const colToString = (col: Vec4_f32):string => {
@@ -49,6 +58,10 @@ export const createGpuBuffer = <T extends Uint8Array | Uint32Array | Float32Arra
     new type(buffer.getMappedRange()).set(dataArray);
     buffer.unmap();
     return buffer;
+}
+
+export const freeGpuBuffer = (buffer:GPUBuffer) => {
+    if (buffer) buffer.destroy();
 }
 
 export const createEmptyGPUBuffer = (

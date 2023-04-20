@@ -9,7 +9,7 @@ import rend_points_shader from './shaders/rend_points.wgsl';
 import * as geoJsonCoords from '@mapbox/geojson-coords';
 import { Delaunay } from 'd3-delaunay';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
-import { createEmptyGPUBuffer, createGpuBuffer, dec2bin, degrees_to_radians, discretize, getErrorMessage } from './helper'
+import { createEmptyGPUBuffer, createGpuBuffer, dec2bin, degrees_to_radians, discretize, freeGpuBuffer, getErrorMessage } from './helper'
 import { GridBuffer, KdPositionBuffer, UniformBuffer } from './rendering/buffer';
 import { Database, DB } from './db';
 import * as ui from './ui';
@@ -96,65 +96,66 @@ export var colorsMap:any = {
 }
 
 export const init = async () => {
-    _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
-    _adapter = await navigator.gpu?.requestAdapter() as GPUAdapter;
-    try {
-        _device = await _adapter?.requestDevice({
-            requiredFeatures: ["timestamp-query"],
-        }) as GPUDevice;
-        ui.TH.setGroups([
-            { name: "Aggregate", id: "agg", avgCount: 60},
-            { name: "Binning", id: "bin", avgCount: 60},
-            { name: "MinMax", id: "minmax", avgCount: 60},
-            { name: "Rendering", id: "rend", avgCount: 60},
-            { name: "WriteBack", id: "wback", avgCount: 60},
-            { name: "Frame", id: "frame", avgCount: 60}
-        ]);
-    } catch (error) {
-        if (getErrorMessage(error).includes('Unsupported feature: timestamp-query')) {
-
-            _timestampQueriesEnabled = false;
-            console.warn("TimeStamp-Queries are not supported on this browser. (Chrome/Canary you need to start with flag: --disable-dawn-features=disallow_unsafe_apis, read more here: https://omar-shehata.medium.com/how-to-use-webgpu-timestamp-query-9bf81fb5344a");
-            ui.TH.setGroups([
-                {name: "Overall Frame-Time", id: "frame", avgCount: 60}
-            ]);
-            _device = await _adapter?.requestDevice() as GPUDevice;
-        } else {
-            throw error;
-        }
-    }
-    _context = _canvas.getContext('webgpu') as unknown as GPUCanvasContext;
     const format: GPUTextureFormat = 'bgra8unorm';
-    _context.configure({
-        device: _device,
-        format: format,
-        alphaMode: "premultiplied"
-    });
-
+    if (!_initialised) {
+        _canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
+        _adapter = await navigator.gpu?.requestAdapter() as GPUAdapter;
+        try {
+            _device = await _adapter?.requestDevice({
+                requiredFeatures: ["timestamp-query"],
+            }) as GPUDevice;
+            ui.TH.setGroups([
+                { name: "Aggregate", id: "agg", avgCount: 60},
+                { name: "Binning", id: "bin", avgCount: 60},
+                { name: "MinMax", id: "minmax", avgCount: 60},
+                { name: "Rendering", id: "rend", avgCount: 60},
+                { name: "WriteBack", id: "wback", avgCount: 60},
+                { name: "Frame", id: "frame", avgCount: 60}
+            ]);
+        } catch (error) {
+            if (getErrorMessage(error).includes('Unsupported feature: timestamp-query')) {
     
-    // Create Buffer
-    uniformBuffer.refresh_db_properties(DB);
-    _uniformBuffer = createGpuBuffer(_device, uniformBuffer.get_buffer(), Uint8Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
-    
-    if (_timestampQueriesEnabled) {
-        _querySet = _device.createQuerySet({
-            type: "timestamp",
-            count: QUERY_CAPACITY
+                _timestampQueriesEnabled = false;
+                console.warn("TimeStamp-Queries are not supported on this browser. (Chrome/Canary you need to start with flag: --disable-dawn-features=disallow_unsafe_apis, read more here: https://omar-shehata.medium.com/how-to-use-webgpu-timestamp-query-9bf81fb5344a");
+                ui.TH.setGroups([
+                    {name: "Overall Frame-Time", id: "frame", avgCount: 60}
+                ]);
+                _device = await _adapter?.requestDevice() as GPUDevice;
+            } else {
+                throw error;
+            }
+        }
+        _context = _canvas.getContext('webgpu') as unknown as GPUCanvasContext;
+        _context.configure({
+            device: _device,
+            format: format,
+            alphaMode: "premultiplied"
         });
-        _queryBuffer = _device.createBuffer({
-            size: 8 * QUERY_CAPACITY,
-            usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
-        });
-        _queryReadBuffer = createEmptyGPUBuffer(_device, _queryBuffer.size, GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST);
+        if (_timestampQueriesEnabled) {
+            _querySet = _device.createQuerySet({
+                type: "timestamp",
+                count: QUERY_CAPACITY
+            });
+            _queryBuffer = _device.createBuffer({
+                size: 8 * QUERY_CAPACITY,
+                usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+            });
+            _queryReadBuffer = createEmptyGPUBuffer(_device, _queryBuffer.size, GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST);
+        }
+        createMapBuffer();
+        _minmaxValueBuffer = createEmptyGPUBuffer(_device, 4 * 4, GPUBufferUsage.STORAGE);
+        _uniformBuffer = createGpuBuffer(_device, uniformBuffer.get_buffer(), Uint8Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
+        createGridBuffer();
+        createPipelines(format);
     }
 
-    createMapBuffer();
-    createGridBuffer();
+    uniformBuffer.refresh_db_properties(DB);
+
+    if (_frameInFlight) {
+        console.error("asdasdasd");
+    }
     createPositionBuffer();
     createTemperatureBuffer();
-    _minmaxValueBuffer = createEmptyGPUBuffer(_device, 4 * 4, GPUBufferUsage.STORAGE);
-
-    createPipelines(format);
     createBindGroups();
 
     _initialised = true;
@@ -200,18 +201,24 @@ const createMapBuffer = () => {
     let [points, triangles] = triangulateGeoJson(geoJsonMap);
     _mapPoints = points;
     _mapTriangleCount = triangles.length;
+    freeGpuBuffer(_mapIndexBuffer);
     _mapIndexBuffer = createGpuBuffer(_device, triangles, Uint32Array, GPUBufferUsage.INDEX);
     let projPoints = getProjectedPoints(_mapPoints);
+    freeGpuBuffer(_mapVertexBuffer);
     _mapVertexBuffer = createGpuBuffer(_device, projPoints, Float32Array, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);
 
     let [pointsBound, trianglesBound] = triangulateGeoJson(geoJsonMapBoundries);
     _mapBoundriesPoints = pointsBound;
     _mapBoundriesTriangleCount = trianglesBound.length;
+    freeGpuBuffer(_mapBoundriesIndexBuffer);
     _mapBoundriesIndexBuffer = createGpuBuffer(_device, trianglesBound, Uint32Array, GPUBufferUsage.INDEX);
     let projPointsBound = getProjectedPoints(_mapBoundriesPoints);
+    freeGpuBuffer(_mapBoundriesVertexBuffer);
     _mapBoundriesVertexBuffer = createGpuBuffer(_device, projPointsBound, Float32Array, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);    
 
+    freeGpuBuffer(_mapModelBuffer);
     _mapModelBuffer = createGpuBuffer(_device, colorsMap.continents, Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
+    freeGpuBuffer(_mapBoundriesModelBuffer);
     _mapBoundriesModelBuffer = createGpuBuffer(_device, colorsMap.water, Float32Array, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
 }
 
@@ -225,11 +232,14 @@ const updateMapPointBuffer = () => {
 const createGridBuffer = () => {
     uniformBuffer.set_screensize(_canvas.width, _canvas.height);
     let pointCount = uniformBuffer.get_pointcount();
+    freeGpuBuffer(_gridBuffer)
     _gridBuffer = createEmptyGPUBuffer(_device, pointCount * 4 * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC);
+    freeGpuBuffer(_workgroupBoundsBuffer);
     _workgroupBoundsBuffer = createEmptyGPUBuffer(_device, Math.ceil(pointCount / BINNING_WORKGROUP_SIZE) * 4 * 2 , GPUBufferUsage.STORAGE);
 }
 
 const createGridReadBuffer = () => {
+    freeGpuBuffer(_gridReadBuffer);
     _gridReadBuffer = createEmptyGPUBuffer(_device, _gridBuffer.size, GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST);
 }
 
@@ -248,9 +258,11 @@ const createPositionBuffer = () => {
         pabView.setInt32(i * 32 + 8, DB.positions[i]['id_min'], true);
         pabView.setInt32(i * 32 + 12, DB.positions[i]['id_max'], true);
     }
+    freeGpuBuffer(_positionBuffer);
     _positionBuffer = createGpuBuffer(_device, positionsArrayBuffer, Uint8Array, GPUBufferUsage.STORAGE);
     
     kdPositionBuffer.from_data(DB);
+    freeGpuBuffer(_kdPositionBuffer);
     _kdPositionBuffer = createGpuBuffer(_device, kdPositionBuffer.get_buffer(), Uint8Array, GPUBufferUsage.STORAGE);
 }
 
@@ -275,6 +287,7 @@ const createTemperatureBuffer = () => {
         let t = DB.temperatures[i];
         tabView.setUint32(i * 4, packTemperatureEntry(t), true);
     }
+    freeGpuBuffer(_temperatureBuffer);
     _temperatureBuffer = createGpuBuffer(_device, temperaturesArrayBuffer, Uint8Array, GPUBufferUsage.STORAGE);
 }
 
@@ -487,7 +500,7 @@ const createBindGroups = () => {
             { binding: 0, resource: { buffer: _uniformBuffer }},
             { binding: 1, resource: { buffer: _positionBuffer }}
         ]
-    })
+    });
 }
 
 export const stopBenchmark = async () => {

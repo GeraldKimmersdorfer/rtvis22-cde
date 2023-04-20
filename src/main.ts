@@ -4,8 +4,8 @@ import { CheckWebGPU } from './helper';
 import * as ui from './ui'
 
 import $ from "jquery";
-import * as renderer from './renderer';
-import { Database, fetchAndUnpackData } from './db';
+
+import * as db from './db';
 import { error } from 'console';
 
 
@@ -22,29 +22,7 @@ const main = () => {
     ui.InitUserInterface();
     ui.showFooter();
 
-    ui.loadingDialogProgress(0.5);
-    fetchAndUnpackData(function on_success(db:Database) {
-        ui.initWithData();
-        renderer.init().then(() => {
-            renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE).then(() => {
-                ui.loadingDialogSuccess("We're all set and ready");
-                ui.showMainMenu();
-                ui.showInfoMenu();
-                ui.showCanvas();
-                ui.showLegend();
-            });
-        }).catch(error => {
-            ui.loadingDialogError(error);
-        });
-        
-        var doitdelayed:number;
-        window.addEventListener('resize', function(){
-            this.clearTimeout(doitdelayed);
-            doitdelayed = this.setTimeout(() => { renderer.renderFrame(renderer.BufferFlags.UPDATE_GRID_BUFFER, renderer.RenderFlags.STAGE_BINNING_MINMAX); }, 100);
-        });
-    }, function on_failure(msg:string) {
-        ui.loadingDialogError(msg);
-    });
+    db.loadDatabaseById(-1);
 
 }
 

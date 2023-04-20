@@ -1,9 +1,10 @@
-//const lzma = require('../node_modules/lzma/src/lzma-d-min.js');
 const LZMAJS = require("./lib/lzmajs.js").LZMAJS;
 
 import { formatMilliseconds } from './helper';
 
 import * as ui from './ui';
+
+import * as renderer from './renderer';
 
 
 export interface Database {
@@ -32,17 +33,114 @@ export interface Database {
 
 export var DB:Database;
 
+const STARTUP_FILE_INDEX = 0
+const DB_FILE_PATH = "assets/db/";
+var _current_db_index = -1; // <-- startup index if not set as url param
+export var DB_files = [
+    {
+        name: "Original (!Redundant entries)",
+        discretization: "2-bit",
+        compressedsize: "7.02 MB",
+        size: "32.80 MB",
+        filename: "cdata_orig_2bit_0.lzma",
+        temperatures: 404,
+        locations: 404
+    },    
+    {
+        name: "Original Cleaned",
+        discretization: "2-bit",
+        compressedsize: "404 MB",
+        size: "404 MB",
+        filename: "cdata_orig_clean_2bit_0.lzma",
+        temperatures: 404,
+        locations: 404
+    },
+    {
+        name: "Extended Interpolated",
+        discretization: "2-bit",
+        compressedsize: "18.60 MB",
+        size: "40.20 MB",
+        filename: "cdata_interp_2bit_0.lzma",
+        temperatures: 404,
+        locations: 404
+    }
+]
+
 let _bufferTime = 0.0;
 let _successFunction: ((arg0:Database) => void);
 let _failureFunction: ((arg0:string) => void);
 
+export const getCurrentDatabseId = ():number => {
+    return _current_db_index;
+}
+
+const getCurrentDatabaseUrl = ():string => {
+    if (_current_db_index < 0) {
+        let db_filename = new URLSearchParams(window.location.search).get('db');
+        if (db_filename) {
+            DB_files.forEach((itm, ind) => {
+                if (itm['filename'] == db_filename) setCurrentDatabaseById(_current_db_index = ind)
+            });
+            if (_current_db_index < 0) console.error(`Startup database with name '${db_filename}' does not exist.`);
+        }
+    }
+    if (_current_db_index < 0) setCurrentDatabaseById(STARTUP_FILE_INDEX);
+    return DB_FILE_PATH + DB_files[_current_db_index].filename;
+}
+
+export const setCurrentDatabaseById = (id:number) => {
+    if (id < 0 || id >= DB_files.length) {
+        console.error("DB-id outside bounds.");
+        return;
+    }
+    _current_db_index = id;
+    ui.loadedDatabaseChanged();
+}
+
+export const loadDatabaseById = (id:number) => {
+    if (id < 0) {
+        let db_filename = new URLSearchParams(window.location.search).get('db');
+        if (db_filename) {
+            DB_files.forEach((itm, ind) => {
+                if (itm['filename'] == db_filename) setCurrentDatabaseById(_current_db_index = ind)
+            });
+            if (_current_db_index < 0) console.error(`Startup database with name '${db_filename}' does not exist.`);
+        }
+    } else {
+        setCurrentDatabaseById(id);
+    }
+    ui.showLoadingDialog();
+    fetchAndUnpackData(function on_success(db:Database) {
+        ui.initWithData();
+        renderer.init().then(() => {
+            renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE).then(() => {
+                ui.loadingDialogSuccess("We're all set and ready");
+                ui.showMainMenu();
+                ui.showInfoMenu();
+                ui.showCanvas();
+                ui.showLegend();
+            });
+        }).catch(error => {
+            ui.loadingDialogError(error);
+        });
+        
+        var doitdelayed:number;
+        window.addEventListener('resize', function(){
+            this.clearTimeout(doitdelayed);
+            doitdelayed = this.setTimeout(() => { renderer.renderFrame(renderer.BufferFlags.UPDATE_GRID_BUFFER, renderer.RenderFlags.STAGE_BINNING_MINMAX); }, 100);
+        });
+    }, function on_failure(msg:string) {
+        ui.loadingDialogError(msg);
+    });
+}
 
 export const fetchAndUnpackData = (on_finish:(data:Database)=>void, on_failure:(msg:string)=>void) => {
     _successFunction = on_finish;
     _failureFunction = on_failure;
     _bufferTime = performance.now();
+    let url = getCurrentDatabaseUrl();
     var oReq = new XMLHttpRequest();
-    oReq.open("GET", "assets/cdata.lzma", true);
+    oReq.open("GET", url, true);
     oReq.responseType = "arraybuffer";
     ui.loadingDialogLabel("Fetching dataset")
     oReq.onerror = function() {
@@ -91,18 +189,6 @@ const decompressData = (data: Uint8Array) => {
             unbinData(res.buffer);
         }
     });
-    /*
-    lzma.LZMA.decompress(data,
-        function on_finish(res: Uint8Array, error: string) {
-            if (!res) {
-                _failureFunction("LZMA decompression failed with error message :" + error)
-            } else {
-                res = new Uint8Array(res);
-                let speed = formatMilliseconds(performance.now() - _bufferTime);
-                ui.loadingDialogAddHistory(`LZMA Decompression [${(res.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
-                unbinData(res.buffer);
-            }
-        });*/
 }
 
 const dvgetUintFcPtr:any = {

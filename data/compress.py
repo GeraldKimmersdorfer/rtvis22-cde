@@ -3,6 +3,7 @@
 # a binary compressed version for the Climatic Change Viewer
 
 filesource = "data/sources/GlobalLandTemperaturesByCity_interpolated.csv"
+#filesource = "data/sources/combined.csv"
 #filesource = "data/sources/GlobalLandTemperaturesByCity_interpolated_small.csv"
 discretizeresolution = 2 # bytes for discretized temperature values
 
