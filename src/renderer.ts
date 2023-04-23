@@ -666,6 +666,7 @@ export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderf
             _gridReadBuffer.unmap();
         }
     
+        var times:ui.TimePushStruct[] = [];
         if (_timestampQueriesEnabled) {
             // wait for timestamp data to be available
             // Read the storage buffer data
@@ -678,30 +679,30 @@ export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderf
             if (renderflags >= RenderFlags.STAGE_AGGREGATE) {
                 let delta = timingsNanoseconds[1] - timingsNanoseconds[0];
                 diffSum += delta;
-                TH.pushTime("agg", Number(delta) / 1000000);
+                times.push({id:"agg", time:Number(delta) / 1000000});
             }
             if (renderflags >= RenderFlags.STAGE_BINNING_MINMAX) {
                 var delta = timingsNanoseconds[2] - timingsNanoseconds[0] - diffSum;
                 diffSum += delta;
-                TH.pushTime("bin", Number(delta) / 1000000);
+                times.push({id:"bin", time:Number(delta) / 1000000});
                 delta = timingsNanoseconds[3] - timingsNanoseconds[0] - diffSum;
                 diffSum += delta;
-                TH.pushTime("minmax", Number(delta) / 1000000);
+                times.push({id:"minmax", time:Number(delta) / 1000000});
             }
             if (renderflags >= RenderFlags.STAGE_RENDERING) {
                 let delta = timingsNanoseconds[4] - timingsNanoseconds[0] - diffSum;
                 diffSum += delta;
-                TH.pushTime("rend", Number(delta) / 1000000);
+                times.push({id:"rend", time:Number(delta) / 1000000});
             }
             if (renderflags >= RenderFlags.STAGE_WRITEBACK) {
                 let delta = timingsNanoseconds[5] - timingsNanoseconds[0] - diffSum;
                 diffSum += delta;
-                TH.pushTime("wback", Number(delta) / 1000000);
+                times.push({id:"wback", time:Number(delta) / 1000000});
             }
             _queryReadBuffer.unmap();
         }
-    
-        TH.pushTime("frame", Date.now() - start);
+        times.push({id:"frame", time:Date.now() - start});
+        TH.pushTimes(times);
     }
     _frameInFlight = false;
 }

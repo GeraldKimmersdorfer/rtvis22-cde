@@ -25,6 +25,11 @@ export interface TimeHolderGroup {
     avgCount: number
 }
 
+export interface TimePushStruct {
+    id: string,
+    time: number
+}
+
 // Shows the error message when webgpu is not available on current browser
 export const ShowNoWebGpuWarning = () => {
     $("body").addClass("error").removeClass("loading");
@@ -44,12 +49,19 @@ class ComputeTimeHolder {
     constructor() {
     }
 
-    pushTime(id: string, time: number) {
-        if (this.frameTimes[id].vals.push(time) > 60) {
-            this.frameTimes[id].vals.shift();
+    pushTime(time: TimePushStruct) {
+        if (this.frameTimes[time.id].vals.push(time.time) > 60) {
+            this.frameTimes[time.id].vals.shift();
         }
-        let avg = this.frameTimes[id].vals.reduce((a, b) => a + b, 0) / this.frameTimes[id].vals.length;
-        $("#lbl-" + id + "time").html(time.toFixed(2) + " ms (Ø " + avg.toFixed(2) + ")");
+        let avg = this.frameTimes[time.id].vals.reduce((a, b) => a + b, 0) / this.frameTimes[time.id].vals.length;
+        $("#lbl-" + time.id + "time").html(time.time.toFixed(2) + " ms (Ø " + avg.toFixed(2) + ")").addClass("updated");
+    }
+
+    pushTimes(times: TimePushStruct[]) {
+        $("#time-group > .time-range").removeClass("updated");
+        times.forEach(itm => {
+            this.pushTime(itm);
+        });
     }
 
     setGroups(groups: TimeHolderGroup[]) {
@@ -346,9 +358,9 @@ export const InitUserInterface = () => {
     });
     $("#db-cards").html(html);
     $(".db_card").mouseenter(function () {
-        $(this).children(".db_card_info").show(300);
+        $(this).children(".db_card_info").clearQueue().show(300);
     }).mouseleave(function () {
-        $(this).children(".db_card_info").hide(300);
+        $(this).children(".db_card_info").clearQueue().hide(300);
     }).click(function() {
         if (!$(this).hasClass("selected")) {
             db.loadDatabaseById($(this).data("dfid"));

@@ -109,6 +109,7 @@ export const loadDatabaseById = (id:number) => {
     } else {
         setCurrentDatabaseById(id);
     }
+    ui.hideLegend();
     ui.showLoadingDialog();
     fetchAndUnpackData(function on_success(db:Database) {
         ui.initWithData();
