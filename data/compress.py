@@ -187,6 +187,10 @@ def compress_dataset(
 
     # TEMPERATURES [(A*count_temperatures) byte]
     bdata.extend(df['disTemp'].to_numpy(dtype=f'>u{bc_temperature}').tobytes())
+
+    df.index.name = "id"
+
+    df_ctilb = df.groupby(['ctilbid']).agg(first_month=('dm', 'first'), id_temp_min=('id', 'first'), id_temp_max=('id', 'last'))
     
     # CTILBS [(C+2B)*count_ctilb]
 # C byte, u8|u16|u24|u32, first_month, The first month of this chunk (in month difference to datebounds.first)
