@@ -1,6 +1,6 @@
 
 
-import { formatMilliseconds } from './helper';
+import { formatMilliseconds, formatFileSize, formatUIntNumbers } from './helper';
 
 import * as ui from './ui';
 
@@ -8,26 +8,25 @@ import * as renderer from './renderer';
 
 
 export interface Database {
-    bounds_avgt: {
-        min:number,
-        max:number
+    datebounds: {
+        db_first:Date,
+        db_last:Date
     };
-    bounds_date: {
-        min:Date,
-        max:Date
+    temperaturebounds: {
+        db_min_temp:number,
+        db_max_temp:number
     };
-    positions: {
-        lat:number,
-        lon:number,
-        x:number,
-        y:number,
-        id_min:number,
-        id_max:number
-    }[];
     temperatures: {
-        dm:number,
-        avgt:number,
-        src:number
+        avgt:number
+    }[];
+    ctilbs: {
+        first_month: number,
+        id_temp_min: number
+    }[];
+    locations: {
+        latitude: number,
+        longitude: number,
+        id_ctilb_min: number
     }[];
 }
 
@@ -42,7 +41,7 @@ export var DB_files = [
         discretization: "2-bit",
         compressedsize: "7.02 MB",
         size: "32.80 MB",
-        filename: "cdata_orig_2bit_0.lzma",
+        filename: "t15M_c498k_l40k_2b_9.lzma",
         temperatures: 404,
         locations: 404
     },    
@@ -67,8 +66,6 @@ export var DB_files = [
 ]
 
 let _bufferTime = 0.0;
-let _successFunction: ((arg0:Database) => void);
-let _failureFunction: ((arg0:string) => void);
 
 export const getCurrentDatabseId = ():number => {
     return _current_db_index;
@@ -111,7 +108,7 @@ export const loadDatabaseById = (id:number) => {
     }
     ui.hideLegend();
     ui.showLoadingDialog();
-    fetchAndUnpackData(function on_success(db:Database) {
+    fetchAndUnpackDatabase().then((db:Database) => {
         ui.initWithData();
         renderer.init().then(() => {
             renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE).then(() => {
@@ -130,154 +127,100 @@ export const loadDatabaseById = (id:number) => {
             this.clearTimeout(doitdelayed);
             doitdelayed = this.setTimeout(() => { renderer.renderFrame(renderer.BufferFlags.UPDATE_GRID_BUFFER, renderer.RenderFlags.STAGE_BINNING_MINMAX); }, 100);
         });
-    }, function on_failure(msg:string) {
-        ui.loadingDialogError(msg);
+    }).catch((error:string) => {
+        ui.loadingDialogError(error);
     });
 }
 
-export const fetchAndUnpackData = (on_finish:(data:Database)=>void, on_failure:(msg:string)=>void) => {
-    _successFunction = on_finish;
-    _failureFunction = on_failure;
-    _bufferTime = performance.now();
+const fetchAndUnpackDatabase = async (): Promise<Database> => {
+    var bufferTime = performance.now()
+
+    /// Downloading data
+    ui.loadingDialogLabel("Fetching dataset");
+    bufferTime = performance.now();
     let url = getCurrentDatabaseUrl();
-    var oReq = new XMLHttpRequest();
-    oReq.open("GET", url, true);
-    oReq.responseType = "arraybuffer";
-    ui.loadingDialogLabel("Fetching dataset")
-    oReq.onerror = function() {
-        _failureFunction("Critical Network Error: Couldnt fetch database file");
-    }
-    oReq.onprogress = function(event) {
-        if (event.lengthComputable) {
-            ui.loadingDialogProgress(event.loaded / event.total);
-          } else {
-            ui.loadingDialogLabel(`Fetching dataset [${event.loaded} bytes]`);
-          }
-    }
-    oReq.onload = function (oEvent) {
-        if (oReq.status != 200) {
-            _failureFunction(`Error while fetching dataset: ${oReq.status} - ${oReq.statusText}`);
-        } else {
-            //Successfully fetched file:
-            let binInputData = new Uint8Array(oReq.response)
-            let speed = formatMilliseconds(performance.now() - _bufferTime);
-            ui.loadingDialogAddHistory(`Fetched dataset [${(binInputData.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
-            ui.loadingDialogProgress(-1);
-            ui.loadingDialogLabel("LZMA decompression of data");
-            decompressData(binInputData);
+    let binData = await downloadData(url);
+    ui.loadingDialogAddHistory(`Fetched dataset [${formatFileSize(binData.byteLength)}; ${formatMilliseconds(performance.now() - bufferTime)}]`);
+    ui.loadingDialogProgress(-1);
+    
+    /// LZMA Decompression
+    ui.loadingDialogLabel("LZMA decompression of data");
+    bufferTime = performance.now();
+    let decBinData = await decompressData(binData);
+    ui.loadingDialogAddHistory(`LZMA Decompression [${formatFileSize(decBinData.byteLength)}; ${formatMilliseconds(performance.now() - bufferTime)}]`);
+    
+    /// Reading binary data
+    ui.loadingDialogLabel("Reading of binary data");
+    bufferTime = performance.now();
+    let db:Database = await readData(decBinData);
+    ui.loadingDialogAddHistory(`Read ${formatUIntNumbers(db.temperatures.length)} entries @ ${formatUIntNumbers(db.locations.length)} locations with ${formatUIntNumbers(db.ctilbs.length)} ctilbs [${formatMilliseconds(performance.now() - bufferTime)}]`);
+
+    return db;
+}
+
+const downloadData = (url: string): Promise<Uint8Array> => {
+    return new Promise<Uint8Array>(function(resolve, reject) {
+        let oReq = new XMLHttpRequest();
+        oReq.open("GET", url, true);
+        oReq.responseType = "arraybuffer";
+        oReq.onerror = function(error) {
+            reject("Couldnt fetch database file: " + error);
         }
-    };
-    oReq.send();
+        oReq.onprogress = function(event) {
+            if (event.lengthComputable) {
+                ui.loadingDialogProgress(event.loaded / event.total);
+            } else {
+                ui.loadingDialogLabel(`Fetching dataset [${event.loaded} bytes]`);
+            }
+        }
+        oReq.onload = function (oEvent) {
+            if (oReq.status != 200) {
+                throw Error(`Error while fetching dataset: ${oReq.status} - ${oReq.statusText}`);
+            } else {
+                //Successfully fetched file:
+                resolve(new Uint8Array(oReq.response));
+            }
+        };
+        oReq.send();
+    });
 }
 
 const decompressData = (data: Uint8Array) => {
-    _bufferTime = performance.now();
-
-    if (typeof(Worker) === "undefined") {
-        // Browser does not support WebWorkers
-        _failureFunction("No web workers supported...");
-    } else {
-        const worker = new Worker("assets/scripts/db_loading_worker.js");
-        worker.postMessage(data.buffer);
-        worker.onmessage = function(msg) {
-            let res = msg.data;
-            if (res instanceof Error) {
-                _failureFunction("LZMA decompression failed:" + res)
-            } else if (res instanceof Uint8Array) {
-                let speed = formatMilliseconds(performance.now() - _bufferTime);
-                ui.loadingDialogAddHistory(`LZMA Decompression [${(res.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
-                unbinData(res.buffer);
+    return new Promise<Uint8Array>(function(resolve, reject) {
+        if (typeof(Worker) === "undefined") {
+            reject("No web workers supported!");
+        } else {
+            const worker = new Worker("assets/scripts/db_decompress_worker.js");
+            worker.onmessage = function(msg) {
+                let res = msg.data;
+                if (res instanceof Error) {
+                    reject("LZMA decompression failed:" + res);
+                } else if (res instanceof Uint8Array) {
+                    resolve(res);
+                } else {
+                    reject("Unkown return type by Decompression worker");
+                }
             }
+            worker.postMessage(data.buffer);
         }
-    }
-/* 
-    new Promise<Uint8Array>((resolve, reject) => {
-        let outStream = new LZMAJS.oStream();
-        try {
-            LZMAJS.decode(data.buffer, outStream);
-        } catch (error) {
-            reject(error);
-        }
-        return resolve(outStream.toUint8Array())
-    }).catch(error => {
-        _failureFunction("LZMA decompression failed:" + error)
-    })
-    .then(res => {
-        if (res instanceof Uint8Array) {
-            let speed = formatMilliseconds(performance.now() - _bufferTime);
-            ui.loadingDialogAddHistory(`LZMA Decompression [${(res.byteLength / (1024 * 1024)).toFixed(2)} MB; ${speed}]`);
-            unbinData(res.buffer);
-        }
-    });*/
+    });
 }
 
-const dvgetUintFcPtr:any = {
-    1: DataView.prototype.getUint8,
-    2: DataView.prototype.getUint16,
-    4: DataView.prototype.getUint32
-};
-
-const unbinData = (data: ArrayBuffer) => {
-    _bufferTime = performance.now();
-    ui.loadingDialogProgress(0);
-    ui.loadingDialogLabel("Unbinning of binary data");
-    let dv = new DataView(data);
-
-    let discretizeresolution = dv.getUint8(0);
-    let bounds_date = {
-        min: new Date(dv.getUint16(1, false), dv.getUint8(3), dv.getUint8(4)),
-        max: new Date(dv.getUint16(5, false), dv.getUint8(7), dv.getUint8(8))
-    };
-    let bounds_avgt = {
-        min: dv.getFloat32(9, false),
-        max: dv.getFloat32(13, false)
-    };
-
-    let lenTemperatures = dv.getUint32(17);
-    let lenPositions = dv.getUint16(21);
-    let lenCountries = dv.getUint8(23);
-    // Read position LUT
-    let db = {
-        'bounds_date': bounds_date,
-        'bounds_avgt': bounds_avgt,
-      'positions': new Array(lenPositions),
-      'temperatures': new Array(lenTemperatures)
-    };
-    let offset = 24;
-    for (let i = 0; i < lenPositions; i++) {
-        db['positions'][i] = {
-            'lat': dv.getFloat32(offset, false),
-            'lon': dv.getFloat32(offset+4, false),
-            'x': 0.0,
-            'y': 0.0,
-            'id_min': dv.getUint32(offset+8, false),
-            'id_max': dv.getUint32(offset+12, false)
-        };
-        offset += 16;
-    }
-    // Read temperature db
-    let avgtspan = bounds_avgt.max - bounds_avgt.min;
-    let maxdisnumber = 2**(discretizeresolution*8)-1;
-    let lastReportedProgress = -1;
-    for (let i = 0; i < lenTemperatures; i++) {
-        let packed_dm:number = dv.getUint16(offset);
-        db['temperatures'][i] = {
-            'dm': packed_dm >>> 2,
-            'avgt': (dvgetUintFcPtr[discretizeresolution].bind(dv)(offset+2) * avgtspan / maxdisnumber) + bounds_avgt.min,
-            'src': packed_dm & 3
-        };
-        offset += 2+discretizeresolution
-
-        let currentProgress = Math.round(i / lenTemperatures * 100);
-        if (currentProgress > lastReportedProgress) {
-          lastReportedProgress = currentProgress;
-          ui.loadingDialogProgress(lastReportedProgress);
+const readData = (data: Uint8Array) => {
+    return new Promise<Database>(function(resolve, reject) {
+        if (typeof(Worker) === "undefined") {
+            reject("No web workers supported!");
+        } else {
+            const worker = new Worker("assets/scripts/db_read_worker.js");
+            worker.onmessage = function(msg) {
+                let res = msg.data;
+                if (res instanceof Error) {
+                    reject("Reading Binary data failed. " + res);
+                } else {
+                    resolve(res);
+                }
+            }
+            worker.postMessage(data.buffer);
         }
-    }
-
-    let speed = formatMilliseconds(performance.now() - _bufferTime);
-    ui.loadingDialogAddHistory(`Read ${(db.temperatures.length/1000000).toFixed(2)}M entries @ ${db.positions.length} locations [${speed}]`);
-
-    DB = db;
-    _successFunction(DB);
+    });   
 }

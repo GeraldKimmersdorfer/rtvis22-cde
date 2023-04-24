@@ -42,8 +42,8 @@ export class UniformBuffer {
     }
 
     refresh_db_properties(db:Database) {
-        this.firstMonthIndex_i32 = db.bounds_date.min.getMonth();
-        this.temperatureBounds = { x_f32: db.bounds_avgt.min, y_f32: db.bounds_avgt.max }
+        this.firstMonthIndex_i32 = db.datebounds.db_first.getMonth();
+        this.temperatureBounds = { x_f32: db.temperaturebounds.db_min_temp, y_f32: db.temperaturebounds.db_max_temp }
     }
 
     set_gridscale(scale: number) {
@@ -236,7 +236,7 @@ export class KdPositionBuffer {
     }
 
     from_data(db:Database) {
-        let pos_modified:any = db.positions;
+        let pos_modified:any = db.locations;
         for (var i = 0; i < pos_modified.length; i++) {
             pos_modified[i]['id'] = i;
         }

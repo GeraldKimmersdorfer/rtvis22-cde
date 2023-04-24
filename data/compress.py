@@ -5,6 +5,10 @@ import numpy as np
 import util as ut
 import math
 import struct
+import lzma
+import threading
+from tqdm import tqdm
+import time
 
 
 # === INPUT LAYOUT ===
@@ -33,31 +37,26 @@ import struct
 # 4 byte, u32, count_ctilb, Continuous-Temperature-Index-Lookup-Blocks
 # 6 byte, datebounds
 #   - u16, db_first_year, first year in dataset (e.g. 1970)
-#   - u8,  db_first_month, first month in dataset (e.g. 0 = january)
+#   - u8,  db_first_month, first month in dataset (e.g. 1 = january)
 #   - u16, db_last_year, last last year in dataset (e.g. 2020) (inklusive!)
-#   - u8,  db_last_month, last month in dataset (e.g. 0 = january) (inklusive!)
+#   - u8,  db_last_month, last month in dataset (e.g. 1 = january) (inklusive!)
 # 8 byte, temperaturebounds, upper and lower bounds for discretization
 #   - f32, db_min_temp, minimum temperature value in database
 #   - f32, db_max_temp, maximum temperature value in database
 # 1 byte, u8,  bc_temperature [A], Discretize-Resolution
-# 1 byte, u8,  bc_temperatureindex [B], getByteCountForIndex(count_locations)
-# 1 byte, u8,  bc_monthdifference [C], getByteCountForMonthDifference(datebounds)
-# 1 byte, u8,  bc_ctilbindex [D], getByteCountForIndex(count_tilb)
 #
 ### TEMPERATURES [(A*count_temperatures) byte]
-# A byte, u8|u16|u24|u32, Discretized temperature value
+# A byte, u8|u16|u32, Discretized temperature value
 # 
-### CTILBS [(C+2B)*count_ctilb]
-# C byte, u8|u16|u24|u32, first_month, The first month of this chunk (in month difference to datebounds.first)
-# B byte, u8|u16|u24|u32, id_temp_min, First index in temperature-list belonging to this ctilb
-# B byte, u8|u16|u24|u32, id_temp_max, Last index in temperature-list belonging to this ctilb 
+### CTILBS [8*count_ctilb]
+# 4 byte, u32, first_month, The first month of this chunk (in month difference to datebounds.first)
+# 4 byte, u32, id_temp_min, First index in temperature-list belonging to this ctilb
 #
-### LOCATIONS [(8+2*D)*count_locations) byte]
+### LOCATIONS [(8+D)*count_locations) byte]
 # 8 byte, position
 #   - f32, latitude
 #   - f32, longitude
-# D byte, u8|u16|u24|u32, id_ctilb_min, First index in ctilb-list belonging to this location (inklusive)
-# D byte, u8|u16|u24|u32, id_ctilb_max, Last index in ctilb-list belonging to this location (inklusive)
+# 4 byte, u32, id_ctilb_min, First index in ctilb-list belonging to this location (inklusive)
 # 
 def compress_dataset(
         df_data,       # The pandas frame containing the data
@@ -120,6 +119,9 @@ def compress_dataset(
     df['ctilbid'] = df['ctilbid'].fillna(method="ffill").astype(np.uint32)
     print(f" -> Found {df['ctilbid'].max() + 1} distinct continous temperature index blocks")
 
+    ### STEP 5b: Create ID-Column
+    df['id'] = df.index
+
     ### STEP 6: Get Header-Data and create dm column
     #df['date'] = pd.to_datetime(dict(year=df.Year, month=df.Month, day=1)) Create Date-Column (kinda slow)
     print("Get Header-Data...")
@@ -141,20 +143,16 @@ def compress_dataset(
     getByteCountForIndex = lambda size: math.ceil(math.log2(size) / 8.0)
     getByteCountForMonthDifference = lambda db:  getByteCountForIndex((db["db_last_month"] - db["db_first_month"] + (db["db_last_year"] - db["db_first_year"]) * 12) + 1)
     bc_temperature = discretizeresolution
-    bc_temperatureindex = getByteCountForIndex(count_temperatures)
-    bc_monthdifference = getByteCountForMonthDifference(datebounds)
-    bc_ctilbindex = getByteCountForIndex(count_ctilb)
     print("== HEADER ==")
     print(f" -> Counts: Temperatures={count_temperatures}; Locations={count_locations}; CTILBs={count_ctilb}")
     print(" -> Datebounds: ", datebounds)
     print(" -> Temperaturebounds: ", temperaturebounds)
-    print(f" -> Byte-Counts: bc_temperature={bc_temperature}, bc_temperatureindex={bc_temperatureindex}, bc_monthdifference={bc_monthdifference}, bc_ctilbindex={bc_ctilbindex}")
+    print(f" -> Byte-Counts: bc_temperature={bc_temperature}")
 
     ### STEP 7: Discretize Temperature using Min/Max Normalization
     print("Discretize Temperature...")
     max_temperature_dis = 2**(bc_temperature*8)-1
     df['disTemp'] = (((df['AverageTemperature'] - temperaturebounds['db_min_temp'])/(temperaturebounds['db_max_temp']-temperaturebounds['db_min_temp'])) * max_temperature_dis).astype(np.uint32)
-    print("Calculating discretization error...")
     df['disError'] = (df['AverageTemperature'] - ((df['disTemp'].astype(np.float32) / max_temperature_dis) * (temperaturebounds['db_max_temp']-temperaturebounds['db_min_temp']) + temperaturebounds['db_min_temp'])).abs()
     df.loc[np.isnan(df['AverageTemperatureUncertainty']), "AverageTemperatureUncertainty"] = 0.0
     df['disErrorUnc'] = df['disError'] - df['AverageTemperatureUncertainty']
@@ -181,29 +179,60 @@ def compress_dataset(
     bdata.extend(struct.pack(">f", temperaturebounds['db_min_temp']))
     bdata.extend(struct.pack(">f", temperaturebounds['db_max_temp']))
     bdata.extend(bc_temperature.to_bytes(1, "big", signed=False))
-    bdata.extend(bc_temperatureindex.to_bytes(1, "big", signed=False))
-    bdata.extend(bc_monthdifference.to_bytes(1, "big", signed=False))
-    bdata.extend(bc_ctilbindex.to_bytes(1, "big", signed=False))
 
     # TEMPERATURES [(A*count_temperatures) byte]
+    oldByteLength = len(bdata)
     bdata.extend(df['disTemp'].to_numpy(dtype=f'>u{bc_temperature}').tobytes())
+    print(f"== TEMPERATURES ==\n -> Wrote {len(bdata) - oldByteLength} Bytes of data")
 
-    df.index.name = "id"
-
-    df_ctilb = df.groupby(['ctilbid']).agg(first_month=('dm', 'first'), id_temp_min=('id', 'first'), id_temp_max=('id', 'last'))
+    # CTILBS [(8)*count_ctilb]
+    oldByteLength = len(bdata)
+    df_ctilb = df.groupby(['ctilbid']).agg(first_month=('dm', 'first'), id_temp_min=('id', 'first'))
+    for row in tqdm(df_ctilb.itertuples(index=False, name=None), desc="Writing CTILB-Table"):
+        bdata.extend(row[0].to_bytes(4, "big", signed=False))
+        bdata.extend(row[1].to_bytes(4, "big", signed=False))
+    print(f"== CTILBS ==\n -> Wrote {len(bdata) - oldByteLength} Bytes of data")
     
-    # CTILBS [(C+2B)*count_ctilb]
-# C byte, u8|u16|u24|u32, first_month, The first month of this chunk (in month difference to datebounds.first)
-# B byte, u8|u16|u24|u32, id_temp_min, First index in temperature-list belonging to this ctilb
-# B byte, u8|u16|u24|u32, id_temp_max, Last index in temperature-list belonging to this ctilb 
+    # LOCATIONS [(12)*count_locations) byte]
+    oldByteLength = len(bdata)
+    df_locations = df.groupby(['locid']).agg(latitude=('Latitude', 'first'), longitude=('Longitude', 'first'), id_ctilb_min=('ctilbid', 'first'))
+    for row in tqdm(df_locations.itertuples(index=False, name=None), desc="Writing Position-Table"):
+        bdata.extend(struct.pack(">f", row[0]))
+        bdata.extend(struct.pack(">f", row[1]))
+        bdata.extend(row[2].to_bytes(4, "big", signed=False))
+    print(f"== LOCATIONS ==\n -> Wrote {len(bdata) - oldByteLength} Bytes of data")
 
-    #bdata.extend()
-    # TEMPERATURES [(A*count_temperatures) byte]
-    #for index, row in df['disTemp'].iterrows():
-    #    bdata.extend(row['disTemp'].to_bytes)
+    ### STEP 9: Check file size for plausibility
+    def calculateTheoreticalFileSize(count_temperatures, count_locations, count_ctilb, A):
+        return 31 + A*count_temperatures + (8)*count_ctilb + (12)*count_locations
+    expectedSize = calculateTheoreticalFileSize(count_temperatures,count_locations,count_ctilb,bc_temperature)
+    if (len(bdata) != expectedSize):
+        raise Exception(f"Binary Data Size is incosistent. Expected: {expectedSize} Bytes, Actual: {len(bdata)}")
+        
+    ### STEP 10: Compress binary data using LZMA:
+    def compress_file_async_lzma(data, filedestination, preset):
+        my_filters = [
+            {
+                "id": lzma.FILTER_LZMA1,
+                "preset": preset
+            }# NOTE: LZMA2 and XZ not supported by JS Implementation. Also different dict_size than standard (64MByte) not supported.
+        ]
+        with lzma.open(filedestination, "w", filters=my_filters, format=lzma.FORMAT_ALONE) as file:
+            file.write(data)
 
+    ### TODO ALREADY ALIGN FOR GPU BUFFER
 
-    ut.df_print_rows(df.loc[df['disTemp'] == df['disTemp'].min()], 400)
-    
+    formatUIntNumber = lambda n: f"{math.floor(n / 1000000)}M" if n > 1000000 else f"{math.floor(n / 1000)}k" if n > 1000 else f"{math.floor(n)}"
+    filepath = f"{output_path}/{filename}"
+    if filename == "auto":
+        filepath = f"{output_path}/t{formatUIntNumber(count_temperatures)}_c{formatUIntNumber(count_ctilb)}_l{formatUIntNumber(count_locations)}_{discretizeresolution}b_{compressionpreset}.lzma"
+    thread = threading.Thread(target=compress_file_async_lzma, args=[bdata, filepath, compressionpreset])
+    thread.start()
+    progressbar = tqdm(unit=" seconds", unit_scale=True, desc="Compressing binary data...", bar_format=r'{desc} [{elapsed}]')
+    while thread.is_alive():
+        progressbar.update(0.03)
+        time.sleep(0.03)
+    progressbar.close()
 
+    #ut.df_print_rows(df.loc[df['disTemp'] == df['disTemp'].min()], 400)
     return df

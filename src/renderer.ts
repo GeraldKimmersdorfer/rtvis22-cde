@@ -243,7 +243,7 @@ const createGridReadBuffer = () => {
     _gridReadBuffer = createEmptyGPUBuffer(_device, _gridBuffer.size, GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST);
 }
 
-const createPositionBuffer = () => {
+const createPositionBuffer = () => {/*
     for (let i = 0; i < DB.positions.length; i++) {
         let tmp:Vec2_f32 = projectPoint(DB.positions[i]['lat'], DB.positions[i]['lon']);
         DB.positions[i]['x'] = tmp.x_f32;
@@ -264,10 +264,11 @@ const createPositionBuffer = () => {
     kdPositionBuffer.from_data(DB);
     freeGpuBuffer(_kdPositionBuffer);
     _kdPositionBuffer = createGpuBuffer(_device, kdPositionBuffer.get_buffer(), Uint8Array, GPUBufferUsage.STORAGE);
+*/
 }
 
 const maxu16 = 2**16-1;
-const packTemperatureEntry = (t:Database["temperatures"][0]):number => {
+const packTemperatureEntry = (t:Database["temperatures"][0]):number => {/*
     if (t.dm >= 2**15 || t.src >= 2**1) {
         console.error("DM or src is out of bounds. Visualization will not be accurate!");
         t.dm = 2**15 -1;
@@ -276,7 +277,8 @@ const packTemperatureEntry = (t:Database["temperatures"][0]):number => {
     let dm = t.dm << 17;
     let src = t.src << 16;
     let tdis = discretize(t.avgt, DB.bounds_avgt.min, DB.bounds_avgt.max, maxu16);
-    return dm | src | tdis;
+    return dm | src | tdis;*/
+    return 0;
 }
 
 
@@ -583,7 +585,7 @@ export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderf
     
             aggregatePass.setPipeline(_aggregatePipeline);
             aggregatePass.setBindGroup(0, _aggregateBindGroup);
-            aggregatePass.dispatchWorkgroups(Math.ceil(DB.positions.length / AGGREGATE_WORKGROUP_SIZE));
+            aggregatePass.dispatchWorkgroups(Math.ceil(DB.locations.length / AGGREGATE_WORKGROUP_SIZE));
             aggregatePass.end();
             if (_timestampQueriesEnabled) commandEncoder.writeTimestamp(_querySet, 1);
         }
@@ -635,7 +637,7 @@ export const renderFrame = async (bufferflags:number = BufferFlags.NONE, renderf
             if (_pointRendering) {
                 renderPass.setPipeline(_drawPointsPipeline);
                 renderPass.setBindGroup(0, _drawPointsBindGroup);
-                renderPass.draw(4, DB.positions.length);
+                renderPass.draw(4, DB.locations.length);
             }
     
             renderPass.end();

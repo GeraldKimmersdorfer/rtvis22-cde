@@ -37,6 +37,16 @@ export const formatUIntNumbers = (n:number):string => {
     return n.toString();
 }
 
+export const formatFileSize = (bytes:number, digits:number=2):string => {
+    if (bytes < 1024) {
+        return `${bytes} B`;
+    } else if (bytes < 1024*1024) {
+        return `${(bytes / 1024).toFixed(digits)} kB`;
+    } else {
+        return `${(bytes / (1024*1024)).toFixed(digits)} MB`;
+    }
+}
+
 export const colToString = (col: Vec4_f32):string => {
     return `rgba(${(col.x_f32 * 255).toFixed(0)},${(col.y_f32 * 255).toFixed(0)},${(col.z_f32 * 255).toFixed(0)}, ${(col.w_f32).toFixed(4)})`;
 }
@@ -95,5 +105,9 @@ export const dec2bin = (dec:number):string => {
 
 export const discretize = (val:number, valmin:number, valmax:number, omax:number):number => {
     let p = (val - valmin) / (valmax - valmin);
-    return Math.round(p * omax);
+    return Math.ceil(p * omax);
+}
+
+export const undiscretize = (disval:number, valmin:number, valmax:number, omax:number):number => {
+    return (disval / omax) * (valmax - valmin) + valmin;
 }

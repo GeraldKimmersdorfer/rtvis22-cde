@@ -177,10 +177,10 @@ export const InitUserInterface = () => {
         slide: function (_event: any, ui: any) {
             var start = new Date(ui.values[0], 0, 1);
             var end = new Date(ui.values[1], 11, 30);
-            if (start < DB.bounds_date.min) start = DB.bounds_date.min;
-            if (end > DB.bounds_date.max) end = DB.bounds_date.max;
-            renderer.uniformBuffer.timeRangeBounds.x_u32 = getMonthDifference(DB.bounds_date.min, start);
-            renderer.uniformBuffer.timeRangeBounds.y_u32 = getMonthDifference(DB.bounds_date.min, end);
+            if (start < DB.datebounds.db_first) start = DB.datebounds.db_last;
+            if (end > DB.datebounds.db_last) end = DB.datebounds.db_last;
+            renderer.uniformBuffer.timeRangeBounds.x_u32 = getMonthDifference(DB.datebounds.db_first, start);
+            renderer.uniformBuffer.timeRangeBounds.y_u32 = getMonthDifference(DB.datebounds.db_first, end);
             $("#lbl-tra").html(ui.values[0] + " - " + ui.values[1]);
             renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE);
         }
@@ -193,10 +193,10 @@ export const InitUserInterface = () => {
         slide: function (_event: any, ui: any) {
             var start = new Date(ui.values[0], 0, 1);
             var end = new Date(ui.values[1], 11, 30);
-            if (start < DB.bounds_date.min) start = DB.bounds_date.min;
-            if (end > DB.bounds_date.max) end = DB.bounds_date.max;
-            renderer.uniformBuffer.timeRangeBounds.z_u32 = getMonthDifference(DB.bounds_date.min, start);
-            renderer.uniformBuffer.timeRangeBounds.w_u32 = getMonthDifference(DB.bounds_date.min, end);
+            if (start < DB.datebounds.db_first) start = DB.datebounds.db_first;
+            if (end > DB.datebounds.db_last) end = DB.datebounds.db_last;
+            renderer.uniformBuffer.timeRangeBounds.z_u32 = getMonthDifference(DB.datebounds.db_first, start);
+            renderer.uniformBuffer.timeRangeBounds.w_u32 = getMonthDifference(DB.datebounds.db_first, end);
 
             $("#lbl-trb").html(ui.values[0] + " - " + ui.values[1]);
             renderer.renderFrame(renderer.BufferFlags.NONE, renderer.RenderFlags.STAGE_AGGREGATE);
@@ -371,12 +371,12 @@ export const InitUserInterface = () => {
 
 export const initWithData = () => {
     $("#s-tra").slider({
-        min: DB.bounds_date.min.getFullYear(),
-        max: DB.bounds_date.max.getFullYear()
+        min: DB.datebounds.db_first.getFullYear(),
+        max: DB.datebounds.db_last.getFullYear()
     });
     $("#s-trb").slider({
-        min: DB.bounds_date.min.getFullYear(),
-        max: DB.bounds_date.max.getFullYear()
+        min: DB.datebounds.db_first.getFullYear(),
+        max: DB.datebounds.db_last.getFullYear()
     });
 }
 
