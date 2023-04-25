@@ -1,22 +1,46 @@
-
-
 function binStreamReader(buffer) {
     dv = new DataView(buffer);
     cursor = 0;
-    const dvgetUintFcPtr = {
-        1: DataView.prototype.getUint8,
-        2: DataView.prototype.getUint16,
-        4: DataView.prototype.getUint32
-    };
     
-    this.readUint = (byteSize) => {
-        tmp = 0
-        if (byteSize == 3) {
-            tmp = (dv.getUint8(cursor) << 16) | (dv.getUint8(cursor + 1) << 8) | (dv.getUint8(cursor + 2)); // big endian!
-        } else {
-            tmp = dvgetUintFcPtr[byteSize].bind(dv)(cursor)
+    this.readUint = (byteSize, littleEndian) => {
+        switch (byteSize) {
+            case 1:
+                return this.readUint8(littleEndian);
+            case 2:
+                return this.readUint16(littleEndian);
+            case 3:
+                return this.readUint24(littleEndian);
+            case 4:
+                return this.readUint32(littleEndian);
         }
-        cursor += byteSize;
+        throw Error(`Unsupported byteSize of ${bytesize}`);
+    }
+
+    this.readUint8 = () => {
+        tmp = dv.getUint8(cursor);
+        cursor += 1;
+        return tmp;
+    }
+
+    this.readUint16 = (littleEndian) => {
+        tmp = dv.getUint16(cursor, littleEndian);
+        cursor += 2;
+        return tmp;
+    }
+
+    this.readUint24 = (littleEndian) => {
+        if (littleEndian) {
+            tmp = (dv.getUint8(cursor + 2) << 16) | (dv.getUint8(cursor + 1) << 8) | (dv.getUint8(cursor)); // little endian!
+        } else {
+            tmp = (dv.getUint8(cursor) << 16) | (dv.getUint8(cursor + 1) << 8) | (dv.getUint8(cursor + 2)); // big endian!
+        }
+        cursor += 3;
+        return tmp;
+    }
+
+    this.readUint32 = (littleEndian) => {
+        tmp = dv.getUint32(cursor, littleEndian);
+        cursor += 4;
         return tmp;
     }
 

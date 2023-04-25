@@ -10,6 +10,14 @@ import threading
 from tqdm import tqdm
 import time
 
+FILEVERSION = 4
+
+compression_methods = {
+    'none': 0,
+    'lzma': 1
+}
+
+bd_buffer_compressed = None
 
 # === INPUT LAYOUT ===
 # The pandas frame has to contain at least the following columns:
@@ -29,9 +37,9 @@ import time
 #
 ### FILE IDENTIFICATION [4 byte]
 # 3 byte, str(ASCII), fileidentification = 'CCE' = x434345 = 4408133
-# 1 byte, u8, fileversion = 3
+# 1 byte, u8, fileversion = FILEVERSION
 #
-### HEADER [30 byte]
+### HEADER [28 byte]
 # 4 byte, u32, count_temperatures, (max. ~2.1 billion)
 # 4 byte, u32, count_locations
 # 4 byte, u32, count_ctilb, Continuous-Temperature-Index-Lookup-Blocks
@@ -43,7 +51,8 @@ import time
 # 8 byte, temperaturebounds, upper and lower bounds for discretization
 #   - f32, db_min_temp, minimum temperature value in database
 #   - f32, db_max_temp, maximum temperature value in database
-# 1 byte, u8,  bc_temperature [A], Discretize-Resolution
+# 1 byte, u8, bc_temperature [A], Discretize-Resolution
+# 1 byte, u8, file_compression, How are the TEMPERATURES, CTILBS, LOCATIONS compressed? [0=No compression, 1=LZMA]
 #
 ### TEMPERATURES [(A*count_temperatures) byte]
 # A byte, u8|u16|u32, Discretized temperature value
@@ -63,7 +72,8 @@ def compress_dataset(
         output_path,        # Directory on where to save the output data
         filename = "auto",   # Filename for the compressed data-file. Auto for generated name
         discretizeresolution = 2,   # byte-count for discretized temperature values. (1-4)
-        compressionpreset = 0       # preset for lzma compressor
+        compression = "none",   # compression? (possible values: ""=="none", "lzma")
+        lzma_preset = 0       # preset for lzma compressor
 ):
     if not isinstance(df_data, pd.DataFrame):
         raise Exception("df_data has to be a dataframe")
@@ -73,6 +83,10 @@ def compress_dataset(
         raise Exception(f"Directory  '{output_path}' does not exist")
     if not ( discretizeresolution == 1 or discretizeresolution == 2 or discretizeresolution == 4 ):
         raise Exception(f"Only Discretize-Resolutions allowed are 1,2 or 4 byte")
+    if compression == "":
+        compression = "none"
+    if not compression in compression_methods:
+        raise Exception(f"Unsupported compression type ({compression})")
 
     ### STEP 1: Delete all NaN values
     print("Dropping NaNs...", end="")
@@ -161,78 +175,84 @@ def compress_dataset(
     print(stats)
 
     ### STEP 8: Get Binary data
-    bdata = bytearray()
+    bd_header = bytearray()
 
     # FILE IDENTIFICATION [4 byte]
-    fileversion = 3
-    bdata.extend(bytes("CCE", "ascii"))
-    bdata.extend(fileversion.to_bytes(1, "big", signed=False))
+    bd_header.extend(bytes("CCE", "ascii"))
+    bd_header.extend(FILEVERSION.to_bytes(1, "big", signed=False))
 
     # HEADER [30 byte]
-    bdata.extend(count_temperatures.to_bytes(4, "big", signed=False))
-    bdata.extend(count_locations.to_bytes(4, "big", signed=False))
-    bdata.extend(count_ctilb.to_bytes(4, "big", signed=False))
-    bdata.extend(datebounds['db_first_year'].to_bytes(2, "big", signed=False))
-    bdata.extend(datebounds['db_first_month'].to_bytes(1, "big", signed=False))
-    bdata.extend(datebounds['db_last_year'].to_bytes(2, "big", signed=False))
-    bdata.extend(datebounds['db_last_month'].to_bytes(1, "big", signed=False))
-    bdata.extend(struct.pack(">f", temperaturebounds['db_min_temp']))
-    bdata.extend(struct.pack(">f", temperaturebounds['db_max_temp']))
-    bdata.extend(bc_temperature.to_bytes(1, "big", signed=False))
+    bd_header.extend(count_temperatures.to_bytes(4, "big", signed=False))
+    bd_header.extend(count_locations.to_bytes(4, "big", signed=False))
+    bd_header.extend(count_ctilb.to_bytes(4, "big", signed=False))
+    bd_header.extend(datebounds['db_first_year'].to_bytes(2, "big", signed=False))
+    bd_header.extend(datebounds['db_first_month'].to_bytes(1, "big", signed=False))
+    bd_header.extend(datebounds['db_last_year'].to_bytes(2, "big", signed=False))
+    bd_header.extend(datebounds['db_last_month'].to_bytes(1, "big", signed=False))
+    bd_header.extend(struct.pack(">f", temperaturebounds['db_min_temp']))
+    bd_header.extend(struct.pack(">f", temperaturebounds['db_max_temp']))
+    bd_header.extend(bc_temperature.to_bytes(1, "big", signed=False))
+    bd_header.extend(compression_methods[compression].to_bytes(1, "big", signed=False))
+
+    bd_buffer = bytearray()
 
     # TEMPERATURES [(A*count_temperatures) byte]
-    oldByteLength = len(bdata)
-    bdata.extend(df['disTemp'].to_numpy(dtype=f'>u{bc_temperature}').tobytes())
-    print(f"== TEMPERATURES ==\n -> Wrote {len(bdata) - oldByteLength} Bytes of data")
+    oldByteLength = len(bd_buffer)
+    bd_buffer.extend(df['disTemp'].to_numpy(dtype=f'>u{bc_temperature}').tobytes())
+    print(f"== TEMPERATURES ==\n -> Wrote {len(bd_buffer) - oldByteLength} Bytes of data")
 
     # CTILBS [(8)*count_ctilb]
-    oldByteLength = len(bdata)
+    oldByteLength = len(bd_buffer)
     df_ctilb = df.groupby(['ctilbid']).agg(first_month=('dm', 'first'), id_temp_min=('id', 'first'))
     for row in tqdm(df_ctilb.itertuples(index=False, name=None), desc="Writing CTILB-Table"):
-        bdata.extend(row[0].to_bytes(4, "big", signed=False))
-        bdata.extend(row[1].to_bytes(4, "big", signed=False))
-    print(f"== CTILBS ==\n -> Wrote {len(bdata) - oldByteLength} Bytes of data")
+        bd_buffer.extend(row[0].to_bytes(4, "big", signed=False))
+        bd_buffer.extend(row[1].to_bytes(4, "big", signed=False))
+    print(f"== CTILBS ==\n -> Wrote {len(bd_buffer) - oldByteLength} Bytes of data")
     
     # LOCATIONS [(12)*count_locations) byte]
-    oldByteLength = len(bdata)
+    oldByteLength = len(bd_buffer)
     df_locations = df.groupby(['locid']).agg(latitude=('Latitude', 'first'), longitude=('Longitude', 'first'), id_ctilb_min=('ctilbid', 'first'))
     for row in tqdm(df_locations.itertuples(index=False, name=None), desc="Writing Position-Table"):
-        bdata.extend(struct.pack(">f", row[0]))
-        bdata.extend(struct.pack(">f", row[1]))
-        bdata.extend(row[2].to_bytes(4, "big", signed=False))
-    print(f"== LOCATIONS ==\n -> Wrote {len(bdata) - oldByteLength} Bytes of data")
+        bd_buffer.extend(struct.pack(">f", row[0]))
+        bd_buffer.extend(struct.pack(">f", row[1]))
+        bd_buffer.extend(row[2].to_bytes(4, "big", signed=False))
+    print(f"== LOCATIONS ==\n -> Wrote {len(bd_buffer) - oldByteLength} Bytes of data")
 
     ### STEP 9: Check file size for plausibility
     def calculateTheoreticalFileSize(count_temperatures, count_locations, count_ctilb, A):
-        return 31 + A*count_temperatures + (8)*count_ctilb + (12)*count_locations
+        return 32 + A*count_temperatures + (8)*count_ctilb + (12)*count_locations
     expectedSize = calculateTheoreticalFileSize(count_temperatures,count_locations,count_ctilb,bc_temperature)
-    if (len(bdata) != expectedSize):
-        raise Exception(f"Binary Data Size is incosistent. Expected: {expectedSize} Bytes, Actual: {len(bdata)}")
-        
-    ### STEP 10: Compress binary data using LZMA:
-    def compress_file_async_lzma(data, filedestination, preset):
-        my_filters = [
-            {
-                "id": lzma.FILTER_LZMA1,
-                "preset": preset
-            }# NOTE: LZMA2 and XZ not supported by JS Implementation. Also different dict_size than standard (64MByte) not supported.
-        ]
-        with lzma.open(filedestination, "w", filters=my_filters, format=lzma.FORMAT_ALONE) as file:
-            file.write(data)
+    if ((len(bd_buffer) + len(bd_header)) != expectedSize):
+        raise Exception(f"Binary Data Size is incosistent. Expected: {expectedSize} Bytes, Actual: {len(bd_buffer) + len(bd_header)}")
 
-    ### TODO ALREADY ALIGN FOR GPU BUFFER
+    ### STEP 10: Compress binary data using LZMA (if required):
+    def compress_file_async_lzma(data, preset):
+        global bd_buffer_compressed
+        # NOTE: LZMA2 and XZ not supported by JS Implementation. Also different dict_size than standard (64MByte) not supported.
+        # NOTE: The new version actually might support it
+        my_filters = [{"id": lzma.FILTER_LZMA1, "preset": preset }]
+        bd_buffer_compressed = lzma.compress(data, format=lzma.FORMAT_ALONE, filters=my_filters)
 
-    formatUIntNumber = lambda n: f"{math.floor(n / 1000000)}M" if n > 1000000 else f"{math.floor(n / 1000)}k" if n > 1000 else f"{math.floor(n)}"
+    if compression == "lzma":
+        thread = threading.Thread(target=compress_file_async_lzma, args=[bd_buffer, lzma_preset])
+        thread.start()
+        progressbar = tqdm(unit=" seconds", unit_scale=True, desc="Compressing binary data...", bar_format=r'{desc} [{elapsed}]')
+        while thread.is_alive():
+            progressbar.update(0.03)
+            time.sleep(0.03)
+        progressbar.close()
+
+    ### STEP 11: Output file
     filepath = f"{output_path}/{filename}"
     if filename == "auto":
-        filepath = f"{output_path}/t{formatUIntNumber(count_temperatures)}_c{formatUIntNumber(count_ctilb)}_l{formatUIntNumber(count_locations)}_{discretizeresolution}b_{compressionpreset}.lzma"
-    thread = threading.Thread(target=compress_file_async_lzma, args=[bdata, filepath, compressionpreset])
-    thread.start()
-    progressbar = tqdm(unit=" seconds", unit_scale=True, desc="Compressing binary data...", bar_format=r'{desc} [{elapsed}]')
-    while thread.is_alive():
-        progressbar.update(0.03)
-        time.sleep(0.03)
-    progressbar.close()
+        filepath = f"{output_path}/t{ut.formatUIntNumber(count_temperatures)}_c{ut.formatUIntNumber(count_ctilb)}_l{ut.formatUIntNumber(count_locations)}_{discretizeresolution}b_{compression}.cce"
+    
+    with open(filepath, "wb") as file:
+        file.write(bd_header)
+        if compression == "none":
+            file.write(bd_buffer)
+        else:
+            file.write(bd_buffer_compressed)
 
     #ut.df_print_rows(df.loc[df['disTemp'] == df['disTemp'].min()], 400)
     return df

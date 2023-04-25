@@ -6,28 +6,55 @@ import * as ui from './ui';
 
 import * as renderer from './renderer';
 
+enum compression_methods {
+    none = 0,
+    lzma = 1
+}
 
 export interface Database {
-    datebounds: {
-        db_first:Date,
-        db_last:Date
-    };
-    temperaturebounds: {
-        db_min_temp:number,
-        db_max_temp:number
-    };
+    header: DatabaseHeader,
+    buffer: DatabaseBuffer,
+    /*
     temperatures: {
         avgt:number
     }[];
     ctilbs: {
         first_month: number,
         id_temp_min: number
-    }[];
+    }[];*/
     locations: {
         latitude: number,
         longitude: number,
         id_ctilb_min: number
     }[];
+}
+
+export interface DatabaseHeader {
+    fileidentification: string,
+    fileversion: number,
+    count_temperatures: number,
+    count_locations: number,
+    count_ctilb: number,
+    datebounds: {
+        db_first_year: number,
+        db_first_month: number,
+        db_last_year: number,
+        db_last_month: number,
+        db_first: Date, // convenience
+        db_last: Date   // convenience
+    },
+    temperaturebounds: {
+        db_min_temp: number,
+        db_max_temp: number
+    },
+    bc_temperature: number,
+    file_compression: compression_methods
+}
+
+export interface DatabaseBuffer {
+    temperatures: ArrayBuffer,
+    ctilbs: ArrayBuffer,
+    locations: ArrayBuffer
 }
 
 export var DB:Database;
@@ -85,7 +112,7 @@ const getCurrentDatabaseUrl = ():string => {
     return DB_FILE_PATH + DB_files[_current_db_index].filename;
 }
 
-export const setCurrentDatabaseById = (id:number) => {
+const setCurrentDatabaseById = (id:number) => {
     if (id < 0 || id >= DB_files.length) {
         console.error("DB-id outside bounds.");
         return;
@@ -142,18 +169,20 @@ const fetchAndUnpackDatabase = async (): Promise<Database> => {
     let binData = await downloadData(url);
     ui.loadingDialogAddHistory(`Fetched dataset [${formatFileSize(binData.byteLength)}; ${formatMilliseconds(performance.now() - bufferTime)}]`);
     ui.loadingDialogProgress(-1);
-    
+
+
     /// LZMA Decompression
-    ui.loadingDialogLabel("LZMA decompression of data");
+    /*ui.loadingDialogLabel("LZMA decompression of data");
     bufferTime = performance.now();
     let decBinData = await decompressData(binData);
     ui.loadingDialogAddHistory(`LZMA Decompression [${formatFileSize(decBinData.byteLength)}; ${formatMilliseconds(performance.now() - bufferTime)}]`);
-    
+    */
+
     /// Reading binary data
     ui.loadingDialogLabel("Reading of binary data");
     bufferTime = performance.now();
-    let db:Database = await readData(decBinData);
-    ui.loadingDialogAddHistory(`Read ${formatUIntNumbers(db.temperatures.length)} entries @ ${formatUIntNumbers(db.locations.length)} locations with ${formatUIntNumbers(db.ctilbs.length)} ctilbs [${formatMilliseconds(performance.now() - bufferTime)}]`);
+    let db:Database = await readData(binData);
+    ui.loadingDialogAddHistory(`Read ${formatUIntNumbers(db.header.count_temperatures)} entries @ ${formatUIntNumbers(db.header.count_locations)} locations with ${formatUIntNumbers(db.header.count_ctilb)} ctilbs [${formatMilliseconds(performance.now() - bufferTime)}]`);
 
     return db;
 }
@@ -206,7 +235,7 @@ const decompressData = (data: Uint8Array) => {
     });
 }
 
-const readData = (data: Uint8Array) => {
+const readData = (data: ArrayBuffer) => {
     return new Promise<Database>(function(resolve, reject) {
         if (typeof(Worker) === "undefined") {
             reject("No web workers supported!");

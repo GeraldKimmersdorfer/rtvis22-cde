@@ -1,4 +1,5 @@
 import pandas as pd
+import math
 from IPython.display import display
 
 # Takes a lat, long string with letters NSEW and converts them into degrees floats
@@ -17,3 +18,6 @@ def tolatlongfloat(lat, long):
 def df_print_rows(df, rowCount):
     with pd.option_context('display.max_rows', 1500, 'display.max_columns', 15):
         display(df.head(1500)) #need display to show the dataframe when using with in jupyter
+
+def formatUIntNumber(n):
+    return f"{math.floor(n / 1000000)}M" if n > 1000000 else f"{math.floor(n / 1000)}k" if n > 1000 else f"{math.floor(n)}"
